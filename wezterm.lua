@@ -65,6 +65,15 @@ config.keys = {
 			},
 		}),
 	},
+
+	-- Swap active pane with a chosen one (shows a selector)
+	{ key = "s", mods = "ALT", action = act.PaneSelect({ mode = "SwapWithActive" }) },
+
+	-- Resize panes with Alt+Arrows
+	{ key = "LeftArrow", mods = "ALT|SHIFT", action = act.AdjustPaneSize({ "Left", 3 }) },
+	{ key = "RightArrow", mods = "ALT|SHIFT", action = act.AdjustPaneSize({ "Right", 3 }) },
+	{ key = "UpArrow", mods = "ALT|SHIFT", action = act.AdjustPaneSize({ "Up", 2 }) },
+	{ key = "DownArrow", mods = "ALT|SHIFT", action = act.AdjustPaneSize({ "Down", 2 }) },
 }
 
 -- Command Palette
