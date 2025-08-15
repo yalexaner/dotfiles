@@ -8,183 +8,20 @@ config.launch_menu = {
 	{ label = "WSL Ubuntu", args = { "wsl.exe", "-d", "Ubuntu" } },
 }
 
-config.font = wezterm.font("JetBrainsMono Nerd Font", { weight = "Bold" })
-
--- set the font
---[[
 local font = "JetBrainsMono Nerd Font"
-config.font = wezterm.font(font)
-config.font_rules = {
-	{
-		intensity = "Bold",
-		font = wezterm.font(font, { weight = "Bold" }),
-	},
-}
-]]
+config.font = wezterm.font(font, { weight = "Bold" })
 
 -- enable font ligatures
 config.harfbuzz_features = { "calt=1", "clig=1", "liga=1", "zero", "ss01" }
 
--- Colors
-config.color_scheme = "Squirrelsong Dark"
-
-config.window_frame = {
-	font = wezterm.font({ family = font, weight = "Bold" }),
-	font_size = 15,
-	-- Fancy tab bar
-	active_titlebar_bg = "#574131",
-	inactive_titlebar_bg = "#352a21",
-}
+-- config.color_scheme = "Tokyo Night"
+config.color_scheme = "Catppuccin Mocha"
 
 -- Command Palette
 config.command_palette_rows = 7
 config.command_palette_font_size = 15
 config.command_palette_bg_color = "#44382D"
 config.command_palette_fg_color = "#c4a389"
-
--- Hot keys
-config.keys = {
-	-- Make Page up/down work
-	{ key = "PageUp", action = wezterm.action.ScrollByPage(-1) },
-	{ key = "PageDown", action = wezterm.action.ScrollByPage(1) },
-
-	-- Pane splitting
-	{
-		key = "d",
-		mods = "CTRL",
-		action = wezterm.action.SplitHorizontal({ domain = "CurrentPaneDomain" }),
-	},
-	{
-		key = "w",
-		mods = "CTRL",
-		action = wezterm.action.CloseCurrentPane({ confirm = false }),
-	},
-
-	-- Switch between tabs
-	{
-		key = "LeftArrow",
-		mods = "CTRL|ALT",
-		action = wezterm.action.ActivateTabRelative(-1),
-	},
-	{
-		key = "RightArrow",
-		mods = "CTRL|ALT",
-		action = wezterm.action.ActivateTabRelative(1),
-	},
-
-	-- Switch between panes
-	{
-		key = "LeftArrow",
-		mods = "CTRL|SHIFT",
-		action = wezterm.action.ActivatePaneDirection("Prev"),
-	},
-	{
-		key = "RightArrow",
-		mods = "CTRL|SHIFT",
-		action = wezterm.action.ActivatePaneDirection("Next"),
-	},
-
-	-- Jump word to the left
-	{
-		key = "LeftArrow",
-		mods = "ALT",
-		action = wezterm.action.SendKey({ key = "b", mods = "ALT" }),
-	},
-	-- Jump word to the right
-	{
-		key = "RightArrow",
-		mods = "ALT",
-		action = wezterm.action.SendKey({ key = "f", mods = "ALT" }),
-	},
-
-	-- Go to beginning of line
-	{
-		key = "LeftArrow",
-		mods = "CTRL",
-		action = wezterm.action.SendKey({
-			key = "a",
-			mods = "CTRL",
-		}),
-	},
-	-- Go to end of line
-	{
-		key = "RightArrow",
-		mods = "CTRL",
-		action = wezterm.action.SendKey({ key = "e", mods = "CTRL" }),
-	},
-	-- Delete line to the left of the cursor
-	-- TODO: It actually deletes the whole line, but it's close enough
-	{
-		key = "Backspace",
-		mods = "CTRL",
-		action = wezterm.action.SendKey({ key = "u", mods = "CTRL" }),
-	},
-
-	-- Case-insensitive search
-	{
-		key = "f",
-		mods = "CTRL",
-		action = wezterm.action.Search({ CaseInSensitiveString = "" }),
-	},
-
-	-- Open WezTerm config file quickly
-	{
-		key = ",",
-		mods = "CTRL",
-		action = wezterm.action.SpawnCommandInNewTab({
-			cwd = os.getenv("WEZTERM_CONFIG_DIR"),
-			set_environment_variables = {
-				TERM = "screen-256color",
-			},
-			args = {
-				"neovide.exe",
-				os.getenv("WEZTERM_CONFIG_FILE"),
-			},
-		}),
-	},
-
-	-- Disable some default hotkeys
-	{
-		key = "Enter",
-		mods = "ALT",
-		action = wezterm.action.DisableDefaultAssignment,
-	},
-
-	-- Rename tab title
-	{
-		key = "R",
-		mods = "CTRL|SHIFT",
-		action = wezterm.action.PromptInputLine({
-			description = "Enter new name for tab",
-			action = wezterm.action_callback(function(window, _, line)
-				-- line will be `nil` if they hit escape without entering anything
-				-- An empty string if they just hit enter
-				-- Or the actual line of text they wrote
-				if line then
-					window:active_tab():set_title(line)
-				end
-			end),
-		}),
-	},
-}
-
--- Mouse
-config.mouse_bindings = {
-	-- Change the default click behavior so that it only selects
-	-- text and doesn't open hyperlinks
-	{
-		event = { Up = { streak = 1, button = "Left" } },
-		mods = "NONE",
-		action = wezterm.action.CompleteSelection("ClipboardAndPrimarySelection"),
-	},
-
-	-- Open links on CTRL+click
-	{
-		event = { Up = { streak = 1, button = "Left" } },
-		mods = "CTRL",
-		action = wezterm.action.OpenLinkAtMouseCursor,
-	},
-}
 
 -- Visual bell
 config.audible_bell = "Disabled"
@@ -243,7 +80,5 @@ end)
 wezterm.on("format-window-title", function(tab, pane, tabs, panes, config)
 	return get_current_working_dir(tab)
 end)
-
---- 8< -- 8< ---
 
 return config
