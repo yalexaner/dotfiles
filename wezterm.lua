@@ -1,6 +1,24 @@
 local wezterm = require("wezterm")
-local config = wezterm.config_builder()
+
+-- local ai_helper_plugin = wezterm.plugin.require("https://github.com/Michal1993r/ai-helper.wezterm")
+local ai_helper_plugin = require("ai-helper-wezterm.plugin")
+local ai_helper_config = {
+	type = "google",
+	api_key = "AIzaSyAFANlyazvGZDncmEA_Quc9ATInj2lS2kA",
+	model = "gemini-2.5-flash",
+	luarocks_path = "D:\\LuaRocks\\luarocks.exe",
+	keybinding = {
+		key = "i",
+		mods = "ALT",
+	},
+	system_prompt = "You are an assistant that specializes in Windows command line, PowerShell, and WSL. "
+		.. "You will be brief and to the point. If asked for commands, print them in a way that's easy to copy. "
+		.. "Otherwise, just answer the question. Concatenate commands with && for cmd or ; for PowerShell where appropriate for ease of use.",
+}
+
 local act = wezterm.action
+
+local config = wezterm.config_builder()
 
 config.default_prog = { "C:\\Program Files\\PowerShell\\7\\pwsh.exe", "-NoLogo" }
 
@@ -116,7 +134,7 @@ local ui_config = {
 		bg_color = "#44382D",
 		fg_color = "#c4a389",
 	},
-	
+
 	-- visual bell
 	bell = {
 		audible = "Disabled",
@@ -128,13 +146,13 @@ local ui_config = {
 			fade_out_duration_ms = 300,
 		},
 	},
-	
+
 	-- cursor and visual settings
 	cursor = {
 		thickness = 2,
 		style = "SteadyBar",
 	},
-	
+
 	-- window settings
 	window = {
 		close_confirmation = "NeverPrompt",
@@ -142,7 +160,7 @@ local ui_config = {
 		padding = { left = 8, right = 8, top = 12, bottom = 8 },
 		adjust_size_when_changing_font = false,
 	},
-	
+
 	-- tab settings
 	tab = {
 		max_width = 60,
@@ -150,7 +168,7 @@ local ui_config = {
 		show_new_tab_button = false,
 		switch_to_last_active_when_closing = true,
 	},
-	
+
 	-- pane settings
 	pane = {
 		inactive_hsb = { saturation = 1.0, brightness = 0.8 },
@@ -228,5 +246,7 @@ end)
 wezterm.on("format-window-title", function(tab, pane, tabs, panes, config)
 	return get_current_working_dir(tab)
 end)
+
+ai_helper_plugin.apply_to_config(config, ai_helper_config)
 
 return config
