@@ -1,5 +1,6 @@
 local wezterm = require("wezterm")
 local config = wezterm.config_builder()
+local act = wezterm.action
 
 config.default_prog = { "C:\\Program Files\\PowerShell\\7\\pwsh.exe", "-NoLogo" }
 
@@ -16,6 +17,39 @@ config.harfbuzz_features = { "calt=1", "clig=1", "liga=1", "zero", "ss01" }
 
 -- config.color_scheme = "Tokyo Night"
 config.color_scheme = "Catppuccin Mocha"
+
+config.keys = {
+	-- --- Tabs ---
+	{ key = "t", mods = "ALT", action = act.SpawnTab("CurrentPaneDomain") },
+	{ key = "w", mods = "ALT|SHIFT", action = act.CloseCurrentTab({ confirm = true }) },
+	{ key = "LeftArrow", mods = "ALT", action = act.ActivateTabRelative(-1) },
+	{ key = "RightArrow", mods = "ALT", action = act.ActivateTabRelative(1) },
+
+	-- Tab by number (Alt+1..9)
+	{ key = "1", mods = "ALT", action = act.ActivateTab(0) },
+	{ key = "2", mods = "ALT", action = act.ActivateTab(1) },
+	{ key = "3", mods = "ALT", action = act.ActivateTab(2) },
+	{ key = "4", mods = "ALT", action = act.ActivateTab(3) },
+	{ key = "5", mods = "ALT", action = act.ActivateTab(4) },
+	{ key = "6", mods = "ALT", action = act.ActivateTab(5) },
+	{ key = "7", mods = "ALT", action = act.ActivateTab(6) },
+	{ key = "8", mods = "ALT", action = act.ActivateTab(7) },
+	{ key = "9", mods = "ALT", action = act.ActivateTab(8) },
+
+	-- --- Panes ---
+	{ key = "w", mods = "ALT", action = act.CloseCurrentPane({ confirm = true }) },
+	{ key = "h", mods = "ALT", action = act.ActivatePaneDirection("Left") },
+	{ key = "l", mods = "ALT", action = act.ActivatePaneDirection("Right") },
+	{ key = "k", mods = "ALT", action = act.ActivatePaneDirection("Up") },
+	{ key = "j", mods = "ALT", action = act.ActivatePaneDirection("Down") },
+
+	-- --- Splits ---
+	{ key = "H", mods = "ALT", action = act.SplitHorizontal({ domain = "CurrentPaneDomain" }) },
+	{ key = "V", mods = "ALT", action = act.SplitVertical({ domain = "CurrentPaneDomain" }) },
+
+	-- --- Reload config ---
+	{ key = "r", mods = "ALT", action = act.ReloadConfiguration },
+}
 
 -- Command Palette
 config.command_palette_rows = 7
