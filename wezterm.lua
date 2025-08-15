@@ -49,6 +49,22 @@ config.keys = {
 
 	-- --- Reload config ---
 	{ key = "r", mods = "ALT", action = act.ReloadConfiguration },
+
+	-- Open wezterm config file in neovide editor
+	{
+		key = ",",
+		mods = "CTRL",
+		action = wezterm.action.SpawnCommandInNewTab({
+			cwd = os.getenv("WEZTERM_CONFIG_DIR"),
+			set_environment_variables = {
+				TERM = "screen-256color",
+			},
+			args = {
+				"neovide.exe",
+				os.getenv("WEZTERM_CONFIG_FILE"),
+			},
+		}),
+	},
 }
 
 -- Command Palette
