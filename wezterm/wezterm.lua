@@ -1,24 +1,6 @@
 local wezterm = require("wezterm")
-
--- local ai_helper_plugin = wezterm.plugin.require("https://github.com/Michal1993r/ai-helper.wezterm")
-local ai_helper_plugin = require("ai-helper-wezterm.plugin")
-local ai_helper_config = {
-	type = "google",
-	api_key = "AIzaSyAFANlyazvGZDncmEA_Quc9ATInj2lS2kA",
-	model = "gemini-2.5-flash",
-	luarocks_path = "D:\\LuaRocks\\luarocks.exe",
-	keybinding = {
-		key = "i",
-		mods = "ALT",
-	},
-	system_prompt = "You are an assistant that specializes in Windows command line, PowerShell, and WSL. "
-		.. "You will be brief and to the point. If asked for commands, print them in a way that's easy to copy. "
-		.. "Otherwise, just answer the question. Concatenate commands with && for cmd or ; for PowerShell where appropriate for ease of use.",
-}
-
-local act = wezterm.action
-
 local config = wezterm.config_builder()
+local act = wezterm.action
 
 config.default_prog = { "C:\\Program Files\\PowerShell\\7\\pwsh.exe", "-NoLogo" }
 
@@ -247,6 +229,5 @@ wezterm.on("format-window-title", function(tab, pane, tabs, panes, config)
 	return get_current_working_dir(tab)
 end)
 
-ai_helper_plugin.apply_to_config(config, ai_helper_config)
 
 return config
