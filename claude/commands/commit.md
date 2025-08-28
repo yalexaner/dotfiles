@@ -1,49 +1,168 @@
-# commit.md - Commit Message Generation Command
+---
+allowed-tools: Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(git branch:*), Bash(jj desc:*)
+argument-hint: [optional context or focus area]
+description: Analyze git diff and automatically generate & commit conventional message with jj desc (lowercase style)
+---
 
-## Usage
-`@commit.md`
+# Commit Message Generation Command (Auto-Commit with Jujutsu)
 
-## Context
-- Automatically analyzes current git diff to determine all changes
-- Examines all modified, added, and deleted files in working directory
-- Conventional Commits specification and project conventions will be strictly followed
-- If main change cannot be determined from diff, will ask user for clarification
+Generate a conventional commit message by analyzing changes with git commands and automatically committing with jujutsu.
+
+## ⚠️ CRITICAL: MIXED GIT/JUJUTSU WORKFLOW
+**Use git commands for analysis, jujutsu ONLY for final commit.**
+- ✅ ANALYSIS: Use `git diff`, `git status`, `git log`
+- ✅ COMMIT: AUTOMATICALLY execute `jj desc -m "commit message"`
+- ❌ NEVER use: `git commit` or `git commit -m`
+
+## Context Information
+- Current git status: !`git status --porcelain`
+- Current branch: !`git branch --show-current`  
+- Staged changes: !`git diff --cached --name-only`
+- Working copy changes: !`git diff --stat`
+- Recent commits for reference: !`git log --oneline -5`
+- Current diff (working copy): !`git diff`
+- Current diff (staged): !`git diff --cached`
 
 ## Your Role
 You are the Commit Message Coordinator directing four specialized commit analysts:
-1. **Change Analyzer** – examines code changes and determines the nature and scope of modifications.
-2. **Type Classifier** – categorizes changes according to Conventional Commits types (feat, fix, chore, etc.).
-3. **Scope Identifier** – determines appropriate scope based on affected components or modules.
-4. **Message Craftsperson** – writes concise, clear commit messages following project standards.
+
+1. **Change Analyzer** – examines code changes and determines the nature and scope of modifications
+2. **Type Classifier** – categorizes changes according to Conventional Commits types (feat, fix, chore, etc.)
+3. **Scope Identifier** – determines appropriate scope based on affected components or modules
+4. **Message Craftsperson** – writes concise, clear commit messages following established standards with lowercase formatting
 
 ## Process
-1. **Diff Analysis**: Automatically examine current git diff to identify all changes
-2. **Specialized Analysis**:
-   - Change Analyzer: Parse git diff for modified, added, deleted files and their changes
-   - Type Classifier: Determine appropriate commit type based on nature of changes
-   - Scope Identifier: Extract relevant scope from affected modules, components, or areas
-   - Message Craftsperson: Craft concise description of the main change
-3. **Message Construction**: Build conventional commit message with proper formatting
-4. **Command Execution**: Run `jj desc -m` with the generated commit message
-5. **Clarification**: If main change cannot be determined, ask user for primary intent
+
+### 1. Diff Analysis
+Analyze the git diff and git status output to identify:
+- All modified, added, and deleted files
+- Nature of changes (new features, bug fixes, refactoring, etc.)
+- Affected components, modules, or areas
+- Breaking changes or significant modifications
+
+### 2. Specialized Analysis
+- **Change Analyzer**: Parse git diff for actual code changes and their impact
+- **Type Classifier**: Determine appropriate commit type based on change nature:
+  - `feat`: New feature or functionality
+  - `fix`: Bug fix or error correction  
+  - `docs`: Documentation changes only
+  - `style`: Code style changes (formatting, missing semicolons, etc.)
+  - `refactor`: Code refactoring without feature changes or bug fixes
+  - `test`: Adding or modifying tests
+  - `chore`: Maintenance tasks, dependency updates, build changes
+  - `perf`: Performance improvements
+  - `ci`: CI/CD configuration changes
+  - `build`: Build system or dependency changes
+  - `revert`: Reverting previous commits
+  - `deps`: Dependency updates
+  - `ops`: Operational components like infrastructure, deployment
+  - `security`: Security-related changes
+- **Scope Identifier**: Extract relevant scope (component, module, or area affected)
+- **Message Craftsperson**: Craft the commit message following these rules
+
+### 3. Commit Message Rules (LOWERCASE STYLE)
+Follow these standards strictly:
+
+**Format**: `<type>[optional scope]: <description>`
+
+**Subject Line Standards (LOWERCASE)**:
+- **Use lowercase after colon**: "feat(api): add user authentication" (NOT "Add user authentication")
+- Use imperative mood with lowercase: "add feature" not "added feature" or "adds feature"
+- Keep subject line to 50 characters maximum
+- Do not end with a period
+- Include lowercase scope in parentheses when applicable: `feat(api): add user authentication`
+
+**Extended Description** (when needed):
+- Separate from subject with blank line
+- **Use lowercase for all bullet points and sentences**
+- Wrap at 72 characters
+- Use dash-prefixed bullet points for multiple changes
+- Explain what and why, not how
+- Include breaking changes with `BREAKING CHANGE:` footer
+
+**Lowercase Examples**:
+```
+feat(auth): add password reset functionality
+
+- add email validation for reset requests
+- implement secure token generation
+- update user model with reset timestamp
+
+BREAKING CHANGE: password reset now requires email verification
+```
+
+**Context Consideration**:
+- Reference project-specific conventions from @CLAUDE.md if available
+- Consider user-provided context: $ARGUMENTS
+- Maintain consistency with recent commit patterns
+- **Always use lowercase formatting for all text after colons and in body**
+
+### 4. Safety and Validation
+- Validate that the message follows Conventional Commits specification with lowercase style
+- Check for proper BREAKING CHANGE format if applicable
+- Ensure scope matches project structure
+- Verify imperative mood with lowercase formatting
+
+### 5. Execution Process
+1. **Generate the commit message** based on analysis (with lowercase formatting)
+2. **Present the message clearly** to the user
+3. **Explain the reasoning** behind type, scope, and description choices
+4. **Automatically execute** the jujutsu command:
+   - ✅ **EXECUTE IMMEDIATELY**: `jj desc -m "commit message"`
+   - ❌ **NEVER**: Don't use `git commit -m` or `git add`
+
+## ⚠️ EXECUTION SAFETY RULES
+
+### What TO DO:
+- ✅ Use `jj desc -m "lowercase commit message"` automatically without confirmation
+- ✅ Analyze changes with `git diff` and `git status`
+- ✅ Reference recent history with `git log`
+
+### What NOT TO DO:
+- ❌ **NEVER run `git add`**
+- ❌ **NEVER run `git commit`** 
+- ❌ **NEVER run `git commit -m`**
+- ❌ **NEVER stage files** (jujutsu doesn't use staging)
+
+### Remember: Mixed Git/Jujutsu Workflow
+- Use git commands to analyze changes (`git diff`, `git status`)
+- Working copy changes are tracked by both git and jj
+- Use traditional git staging if needed for analysis
+- **Automatically execute** `jj desc -m` with generated message (no user confirmation needed)
 
 ## Output Format
-1. **Git Diff Analysis** – complete breakdown of all changed, added, and deleted files
-2. **Change Classification** – determined commit type, scope, and main change identification
-3. **Generated Commit Message** – conventional commit message with extended description if needed
-4. **Command Execution** – automatic execution of `jj desc -m "commit message"`
-5. **Execution Confirmation** – verification that commit description was successfully set
 
-## Commit Message Rules
-- Strictly follow Conventional Commits specification
-- Use lowercase standardized types: feat, fix, chore, refactor, docs, style, test, perf, ci, build, revert
-- Include lowercase scope in parentheses when applicable: `feat(api):`
-- Keep main description under 72 characters (aim for 50)
-- Use imperative mood: "add feature" not "added feature"
-- Generate extended description as dash-prefixed list when additional context is needed
-- Must analyze ALL files in current git diff automatically
-- If main change cannot be determined from diff, ask user for primary intent
-- Execute `jj desc -m` command with generated message automatically
+### Analysis Summary
+- **Files Changed**: List of modified files with change types
+- **Change Type**: Primary type of change with reasoning
+- **Affected Scope**: Component/module scope determination
+- **Breaking Changes**: Any breaking changes identified
 
-## Note
-This command automatically analyzes git diff and executes commit. No user input needed unless main change is ambiguous. For code implementation, use @code.md. For architectural decisions, use @ask.md.
+### Generated Commit Message (LOWERCASE STYLE)
+```
+<type>[scope]: <lowercase description>
+
+[optional extended description with lowercase bullet points]
+
+[optional footers including BREAKING CHANGE if applicable]
+```
+
+### Execution Plan
+- **Command to be executed**: `jj desc -m "the generated message"`
+- **No confirmation required** - executes automatically
+- **Alternative suggestions if needed**
+
+## Usage Examples
+- `/commit` - Analyze current changes and generate lowercase commit message
+- `/commit focus on API changes` - Generate message with specific focus area  
+- `/commit this fixes the login bug` - Generate message with provided context
+
+## Notes
+- **Always use lowercase formatting** after colons and in body text
+- Use git commands to analyze ALL changes in the working copy and staging area
+- If no changes exist, suggest using git add to stage changes first
+- If main change cannot be determined clearly, ask user for primary intent
+- Follow project-specific commit conventions if defined in CLAUDE.md
+- Ensure message is meaningful and follows team standards
+- **AUTOMATICALLY execute `jj desc -m` - no confirmation needed**
+- Remember: Use git for analysis, `jj desc -m` for automatic committing
