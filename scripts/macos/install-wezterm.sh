@@ -85,9 +85,9 @@ install_font() {
   fi
 
   say "Installing JetBrainsMono Nerd Font..."
-  if brew tap | grep -q '^homebrew/cask-fonts$'; then
-    warn "Removing deprecated tap homebrew/cask-fonts"
-    brew untap homebrew/cask-fonts || true
+  if ! brew tap | grep -q '^homebrew/cask-fonts$'; then
+    say "Adding tap homebrew/cask-fonts"
+    brew tap homebrew/cask-fonts || true
   fi
   if brew install --cask font-jetbrains-mono-nerd-font; then
     say "JetBrainsMono Nerd Font installed successfully"
