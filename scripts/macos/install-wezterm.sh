@@ -44,7 +44,7 @@ ensure_brew() {
     shell_profile="$HOME/.profile"
   fi
 
-  if ! grep -qs 'brew shellenv' "$shell_profile" 2>/dev/null; then
+  if ! grep -Eq '^[[:space:]]*eval "\(/\(opt\|usr/local\)/homebrew/bin/brew shellenv\)"' "$shell_profile" 2>/dev/null; then
     info "Adding Homebrew to $shell_profile"
     if [[ -x /opt/homebrew/bin/brew ]]; then
       echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> "$shell_profile"
@@ -67,8 +67,13 @@ install_wezterm() {
   fi
 
   say "Installing WezTerm..."
-  brew update
-  brew install --cask wezterm
+  # Ensure cask is available and attempt a resilient install
+  brew tap homebrew/cask >/dev/null 2>&1 || true
+  if ! brew install --cask wezterm; then
+    warn "WezTerm install failed, retrying once..."
+    sleep 2
+    brew install --cask wezterm
+  fi
   
   if ! brew list --cask wezterm >/dev/null 2>&1; then
     error "WezTerm installation failed"

@@ -219,8 +219,13 @@ config.scrollback_lines = general_config.scrollback_lines
 
 local function get_current_working_dir(tab)
 	local current_dir_uri = tab.active_pane and tab.active_pane.current_working_dir or ""
-	local current_dir_path = current_dir_uri:gsub("file://", "")
-	local home_dir_path = (wezterm.target_triple:find("windows") and os.getenv("USERPROFILE")) or os.getenv("HOME") or wezterm.home_dir
+	local function normalize_path(p)
+		if not p then return "" end
+		p = p:gsub("\\", "/")
+		return string.lower(p)
+	end
+	local current_dir_path = normalize_path(current_dir_uri:gsub("file://", ""))
+	local home_dir_path = normalize_path((wezterm.target_triple:find("windows") and os.getenv("USERPROFILE")) or os.getenv("HOME") or wezterm.home_dir)
 	if current_dir_path == home_dir_path then
 		return "."
 	end
