@@ -2,11 +2,17 @@ local wezterm = require("wezterm")
 local config = wezterm.config_builder()
 local act = wezterm.action
 
-config.default_prog = { "C:\\Program Files\\PowerShell\\7\\pwsh.exe", "-NoLogo" }
+-- Set default shell only on Windows; otherwise let WezTerm decide
+if wezterm.target_triple:find("windows") then
+  config.default_prog = { "C:\\Program Files\\PowerShell\\7\\pwsh.exe", "-NoLogo" }
+end
 
-config.launch_menu = {
+config.launch_menu = wezterm.target_triple:find("windows") and {
 	{ label = "PowerShell 7", args = { "C:\\Program Files\\PowerShell\\7\\pwsh.exe", "-NoLogo" } },
 	{ label = "WSL Ubuntu", args = { "wsl.exe", "-d", "Ubuntu" } },
+} or {
+	{ label = "Zsh", args = { "/bin/zsh", "-l" } },
+	{ label = "Bash", args = { "/bin/bash", "-l" } },
 }
 
 -- font configuration
@@ -81,21 +87,32 @@ local resize_keys = {
 
 -- --- Configuration & Utilities ---
 local config_keys = {
-	{ key = "r", mods = "ALT", action = act.ReloadConfiguration },
-	{
-		key = ",",
-		mods = "CTRL",
-		action = wezterm.action.SpawnCommandInNewTab({
-			cwd = os.getenv("WEZTERM_CONFIG_DIR"),
-			set_environment_variables = {
-				TERM = "screen-256color",
-			},
-			args = {
-				"neovide.exe",
-				os.getenv("WEZTERM_CONFIG_FILE"),
-			},
-		}),
-	},
+  { key = "r", mods = "ALT", action = act.ReloadConfiguration },
+  {
+    key = ",",
+    mods = "CTRL",
+    action = wezterm.action.SpawnCommandInNewTab({
+      cwd = os.getenv("WEZTERM_CONFIG_DIR"),
+      set_environment_variables = {
+        TERM = "screen-256color",
+      },
+      -- Prefer neovide; fallback to nvim or vim if unavailable
+      args = (function()
+        if wezterm.target_triple:find("windows") then
+          local ps = [[
+$cfg = $env:WEZTERM_CONFIG_FILE
+if (Get-Command neovide -ErrorAction SilentlyContinue) { neovide $cfg }
+elseif (Get-Command nvim -ErrorAction SilentlyContinue) { nvim $cfg }
+elseif (Get-Command vim -ErrorAction SilentlyContinue) { vim $cfg }
+else { Write-Host 'No editor (neovide/nvim/vim) found in PATH'; Start-Sleep -Seconds 3 }
+]]
+          return { "powershell.exe", "-NoLogo", "-NoProfile", "-Command", ps }
+        else
+          return { "/bin/sh", "-lc", "neovide \"$WEZTERM_CONFIG_FILE\" || nvim \"$WEZTERM_CONFIG_FILE\" || vim \"$WEZTERM_CONFIG_FILE\"" }
+        end
+      end)(),
+    }),
+  },
 }
 
 -- combine all keybindings
@@ -202,8 +219,13 @@ config.scrollback_lines = general_config.scrollback_lines
 
 local function get_current_working_dir(tab)
 	local current_dir_uri = tab.active_pane and tab.active_pane.current_working_dir or ""
-	local current_dir_path = current_dir_uri:gsub("file://", "")
-	local home_dir_path = os.getenv("USERPROFILE")
+	local function normalize_path(p)
+		if not p then return "" end
+		p = p:gsub("\\", "/")
+		return string.lower(p)
+	end
+	local current_dir_path = normalize_path(current_dir_uri:gsub("file://", ""))
+	local home_dir_path = normalize_path((wezterm.target_triple:find("windows") and os.getenv("USERPROFILE")) or os.getenv("HOME") or wezterm.home_dir)
 	if current_dir_path == home_dir_path then
 		return "."
 	end
