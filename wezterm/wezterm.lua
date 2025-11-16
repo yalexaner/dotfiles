@@ -226,7 +226,7 @@ config.hyperlink_rules = general_config.hyperlink_rules
 config.scrollback_lines = general_config.scrollback_lines
 
 local function get_current_working_dir(tab)
-	local current_dir_uri = tab.active_pane and tab.active_pane.current_working_dir or ""
+	local current_dir_uri = tab.active_pane and tostring(tab.active_pane.current_working_dir) or ""
 	local function normalize_path(p)
 		if not p then return "" end
 		p = p:gsub("\\", "/")
