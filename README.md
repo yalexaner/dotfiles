@@ -23,10 +23,14 @@ this repository contains configuration files for:
 │   ├── CLAUDE.md              # ai assistant configuration and guidelines
 │   ├── settings.json          # claude permissions and settings
 │   └── skills/
-│       └── commit/            # commit message generation skill
+│       ├── commit/            # commit message generation skill
+│       │   ├── SKILL.md       # main skill instructions
+│       │   └── references/
+│       │       └── types.md   # conventional commit types reference
+│       └── review-mr/         # gitlab merge request review skill
 │           ├── SKILL.md       # main skill instructions
 │           └── references/
-│               └── types.md   # conventional commit types reference
+│               └── checklist.md  # detailed review checklists
 ├── powershell/
 │   └── Microsoft.PowerShell_profile.ps1  # powershell profile with utilities
 └── wezterm/
@@ -42,6 +46,13 @@ this repository contains configuration files for:
   - detailed commit types reference
 - custom git and jj operation rules
 - code commenting guidelines
+- **review-mr skill**: comprehensive gitlab mr review with:
+  - problem understanding and jira integration
+  - alternative approach brainstorming with pros/cons
+  - implementation comparison analysis
+  - code quality checks (logic, security, performance, dry)
+  - architecture and clean code assessment
+  - structured review report generation
 
 ### powershell utilities
 - **md5**: compute file hashes
@@ -106,6 +117,9 @@ this repository contains configuration files for:
 ### wezterm
 - wezterm terminal emulator
 - jetbrainsmono nerd font
+
+### claude skills
+- glab cli (for gitlab mr review skill)
 
 ### android development (for silo function)
 - android sdk
