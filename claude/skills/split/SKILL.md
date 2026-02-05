@@ -1,7 +1,7 @@
 ---
 name: split
-description: Split large revisions into atomic, reviewable commits using manual reconstruction. Use when changes touch multiple unrelated areas, when preparing for code review, or when the user says "split".
-allowed-tools: Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(jj new:*), Bash(jj log:*), Bash(jj st:*), Bash(jj show:*), Bash(jj edit:*), Bash(jj desc:*), Bash(jj abandon:*), Bash(jj bookmark:*), Read, Edit, Write, Skill(commit:*)
+description: Split large revisions into atomic, reviewable commits. Use when changes touch multiple unrelated areas, when preparing for code review, or when the user says "split".
+allowed-tools: Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(jj new:*), Bash(jj log:*), Bash(jj st:*), Bash(jj show:*), Bash(jj edit:*), Bash(jj desc:*), Bash(jj abandon:*), Bash(jj rebase:*), Read, Edit, Write, Skill(commit:*)
 argument-hint: [optional context or focus area]
 disable-model-invocation: true
 ---
@@ -12,102 +12,121 @@ Automatically split changes into atomic commits, or commit directly if no split 
 
 ## Context
 
-- Git status: !`git status --porcelain`
 - Changes: !`git diff --stat`
-- Recent commits: !`git log --oneline -5`
 - Current jj log: !`jj log -n 5`
 - Full diff: !`git diff`
 
-## Execution Mode: Fully Automatic
-
-**No user interaction unless truly blocked.**
+## Execution: Fully Automatic
 
 1. Analyze changes silently
-2. Decide: split or single commit
-3. Execute automatically
-4. Report result at the end
+2. If single commit → call `/commit` → output "Done: 1 commit"
+3. If split needed → create ALL commits → verify → cleanup → output result
 
 ## Decision: Split or Not?
 
-**No split needed (single commit) when:**
+**No split needed when:**
 - All changes serve one logical purpose
-- Files are tightly coupled (reference each other)
-- The "and" test passes (message doesn't need "and")
+- Files are tightly coupled
 - Same layer/component
 
 **Split needed when:**
-- Mixed unrelated changes (bug fix + feature)
-- Different layers that could be independent
-- Independent changes in same file
+- Mixed unrelated changes
+- Different independent features
 - Message would need "and"
 
 ## If No Split Needed
 
-Immediately call `/commit` and report:
-
+Call `/commit`, then output:
 ```
-Done: 1 commit created
+Done: 1 commit
 ```
 
 ## If Split Needed
 
-### Atomic Commit Criteria
+### Expected Result
 
-Each commit must be:
-- **Single-purpose** - one logical thing
-- **Compilable** - builds independently
-- **Bisectable** - valid checkpoint for debugging
+```
+BEFORE:
+Parent (abc) → Messy (@) with changes A+B
+
+AFTER:
+Parent (abc) → Commit1 (A) → Commit2 (B)
+No messy commit, no bookmarks, no empty commits
+```
+
+### Workflow
+
+1. **Note IDs** (no bookmarks!)
+   ```bash
+   jj log -r @   # messy-id
+   jj log -r @-  # parent-id
+   ```
+
+2. **Go to parent**
+   ```bash
+   jj new <parent-id>
+   ```
+
+3. **For EACH planned commit** (don't stop after first!):
+   - Implement changes using Edit/Write
+   - Call `/commit`
+   - Then `jj new` for next commit (except after last one)
+
+4. **Safety check** - rebase messy onto last commit:
+   ```bash
+   jj rebase -r <messy-id> -d @
+   jj diff -r <messy-id>
+   ```
+   If empty → all changes moved correctly
+   If has changes → something was missed
+
+5. **Cleanup** (only if messy is empty):
+   ```bash
+   jj abandon <messy-id>
+   ```
+
+6. **Output**:
+   ```
+   Done: N commits
+   1. <message>
+   2. <message>
+   ```
 
 ### Dependency Order
 
 Build foundation first:
-
 ```
 Layer 1: Models/APIs → Layer 2: Domain → Layer 3: ViewModels → Layer 4: UI
 ```
 
-### Reconstruction Workflow
-
-1. **Bookmark reference**: `jj bookmark create messy-reference -r @`
-2. **Go to parent**: `jj new @-`
-3. **For each commit** (in dependency order):
-   - `jj new` - create empty commit
-   - Implement the changes for this commit using Edit/Write tools
-   - Call `/commit` to generate message
-4. **Cleanup**: `jj abandon messy-reference && jj bookmark delete messy-reference`
-5. **Report**:
-   ```
-   Done: N commits created
-   1. <commit message>
-   2. <commit message>
-   ...
-   ```
-
-## When to Stop and Ask
-
-Only stop for user input when:
-- Cannot determine logical groupings
-- Ambiguous dependency order
-- Conflicting requirements in user context
-
-In these cases, briefly explain the blocker and ask for clarification.
-
 ## Rules
 
 **Do:**
-- Execute fully automatically
-- Call `/commit` for each revision (it handles messages)
-- Report only the final result
-- Use Edit/Write to implement changes during reconstruction
+- Create ALL planned commits (not just the first one!)
+- Call `/commit` for each revision
+- Rebase messy as safety check
+- Abandon messy only if empty
+- Output only final result
 
 **Don't:**
-- Generate commit messages (let /commit do it)
-- Explain analysis in detail
-- Ask for confirmation
-- Show intermediate steps
-- Use jj split or jj squash commands
+- Create bookmarks
+- Create empty commits
+- Stop after first commit
+- Leave messy commit or empty commits
+- Generate commit messages (use /commit)
+
+## Error: Safety Check Failed
+
+If messy not empty after rebase:
+```
+WARNING: Not all changes were moved
+
+Remaining changes:
+<jj diff -r messy-id output>
+
+Please review manually.
+```
 
 ## Usage
 
 - `/split` - Analyze and split/commit automatically
-- `/split focus on the refactoring` - Split with specific context
