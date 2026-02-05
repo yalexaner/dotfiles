@@ -11,7 +11,7 @@ personal configuration files for development environment setup
 
 this repository contains configuration files for:
 
-- **claude ai**: ai assistant configuration with custom commands and settings
+- **claude ai**: ai assistant configuration with custom skills and settings
 - **powershell**: comprehensive profile with utility functions and aliases
 - **wezterm**: terminal emulator configuration with custom keybindings and themes
 
@@ -19,11 +19,15 @@ this repository contains configuration files for:
 
 ```
 .
+├── .claude/
+│   └── skills/
+│       └── commit/            # commit message generation skill
+│           ├── SKILL.md       # main skill instructions
+│           └── references/
+│               └── types.md   # conventional commit types reference
 ├── claude/
 │   ├── CLAUDE.md              # ai assistant configuration and guidelines
-│   ├── settings.json          # claude permissions and settings
-│   └── commands/
-│       └── commit.md          # commit message generation command
+│   └── settings.json          # claude permissions and settings
 ├── powershell/
 │   └── Microsoft.PowerShell_profile.ps1  # powershell profile with utilities
 └── wezterm/
@@ -33,9 +37,11 @@ this repository contains configuration files for:
 ## features
 
 ### claude configuration
-- conventional commits specification enforcement
+- **commit skill**: automated commit message generation with jujutsu
+  - conventional commits specification (lowercase style)
+  - progressive context loading with git diff injection
+  - detailed commit types reference
 - custom git and jj operation rules
-- automated commit message generation
 - code commenting guidelines
 
 ### powershell utilities
@@ -71,9 +77,12 @@ this repository contains configuration files for:
 
    **claude**:
    ```bash
-   # windows/wsl
-   mkdir -p ~/.claude
-   cp claude/* ~/.claude/
+   # copy skills
+   cp -r .claude/skills ~/.claude/
+
+   # copy configuration
+   cp claude/CLAUDE.md ~/.claude/
+   cp claude/settings.json ~/.claude/
    ```
 
    **powershell**:
