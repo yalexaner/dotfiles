@@ -19,15 +19,14 @@ this repository contains configuration files for:
 
 ```
 .
-├── .claude/
+├── claude/
+│   ├── CLAUDE.md              # ai assistant configuration and guidelines
+│   ├── settings.json          # claude permissions and settings
 │   └── skills/
 │       └── commit/            # commit message generation skill
 │           ├── SKILL.md       # main skill instructions
 │           └── references/
 │               └── types.md   # conventional commit types reference
-├── claude/
-│   ├── CLAUDE.md              # ai assistant configuration and guidelines
-│   └── settings.json          # claude permissions and settings
 ├── powershell/
 │   └── Microsoft.PowerShell_profile.ps1  # powershell profile with utilities
 └── wezterm/
@@ -77,12 +76,8 @@ this repository contains configuration files for:
 
    **claude**:
    ```bash
-   # copy skills
-   cp -r .claude/skills ~/.claude/
-
-   # copy configuration
-   cp claude/CLAUDE.md ~/.claude/
-   cp claude/settings.json ~/.claude/
+   # copy configuration and skills
+   cp -r claude/* ~/.claude/
    ```
 
    **powershell**:
