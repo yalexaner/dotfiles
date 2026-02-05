@@ -1,6 +1,6 @@
 ---
-name: split-commits
-description: Split large revisions into atomic, reviewable commits using manual reconstruction. Use when changes touch multiple unrelated areas, when preparing for code review, or when the user says "split commits".
+name: split
+description: Split large revisions into atomic, reviewable commits using manual reconstruction. Use when changes touch multiple unrelated areas, when preparing for code review, or when the user says "split".
 allowed-tools: Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(jj new:*), Bash(jj log:*), Bash(jj st:*), Bash(jj show:*), Bash(jj edit:*), Bash(jj desc:*), Bash(jj abandon:*), Bash(jj bookmark:*), Read, Edit, Write
 argument-hint: [optional context or focus area]
 disable-model-invocation: true
@@ -236,8 +236,8 @@ Ready to begin? I'll set up the reference bookmark and guide you through each co
 
 ## Usage
 
-- `/split-commits` - Analyze current changes and create reconstruction plan
-- `/split-commits focus on the refactoring` - Split with specific context
+- `/split` - Analyze current changes and create reconstruction plan
+- `/split focus on the refactoring` - Split with specific context
 
 ## Additional Resources
 
