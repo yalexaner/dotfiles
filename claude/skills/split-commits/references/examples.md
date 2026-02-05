@@ -1,152 +1,185 @@
-# Commit Splitting Examples
+# Manual Reconstruction Examples
 
-## Good Examples
+## Example 1: API Field Rename Across Multiple Layers
 
-### Example 1: Feature with Multiple Components
+### The Messy Commit
 
-**Changes:** New user authentication with API, ViewModel, and UI changes
+You have one commit that:
+- Renames `ip` to `url` in a data class
+- Updates 3 ViewModels to use the new field name
+- Adds a loading indicator to the UI
 
-**Good split:**
+### Reconstruction Plan
+
 ```
-Commit 1: feat(api): add authentication endpoint
-  - AuthApi.kt
-  - AuthResponse.kt
-  Reason: API layer foundation
+Reference commit: abc123
 
-Commit 2: feat(auth): add authentication repository
-  - AuthRepository.kt
-  - AuthRepositoryImpl.kt
-  Reason: Domain layer using new API
+Commit 1 (Layer 1): refactor(model): rename ip to url in ValidationEvent
+  - ValidationEvent.kt: change field name
 
-Commit 3: feat(auth): add login viewmodel
-  - LoginViewModel.kt
-  Reason: Presentation layer using repository
+Commit 2 (Layer 3): refactor(viewmodel): update event field references
+  - SavedViewModel.kt: event.ip → event.url
+  - ManualViewModel.kt: event.ip → event.url
+  - MdnsViewModel.kt: event.ip → event.url
 
-Commit 4: feat(auth): add login screen ui
+Commit 3 (Layer 4): feat(ui): add loading indicator
+  - ConnectionScreen.kt: add CircularProgressIndicator
+```
+
+### Why This Order?
+
+- Commit 1 must come first - ViewModels can't reference `event.url` until it exists
+- Commit 2 uses the new field - depends on Commit 1
+- Commit 3 is independent UI work - could be separate PR entirely
+
+### Execution
+
+```bash
+# Setup
+jj bookmark create messy-reference -r @
+jj new @-
+
+# Commit 1: Rename field
+jj new -m "WIP: rename ip to url"
+# Edit ValidationEvent.kt - change the field name
+# Verify: build passes
+jj desc -m "refactor(model): rename ip to url in ValidationEvent"
+
+# Commit 2: Update consumers
+jj new -m "WIP: update viewmodels"
+# Edit each ViewModel - update field references
+# Verify: build passes
+jj desc -m "refactor(viewmodel): update event field references"
+
+# Commit 3: Add UI feature
+jj new -m "WIP: loading indicator"
+# Edit ConnectionScreen.kt - add the indicator
+# Verify: build passes
+jj desc -m "feat(ui): add loading indicator to connection screen"
+
+# Cleanup
+jj abandon messy-reference
+jj bookmark delete messy-reference
+```
+
+---
+
+## Example 2: Same File, Different Logical Changes
+
+### The Messy Commit
+
+`UserViewModel.kt` has mixed changes:
+- Lines 20-35: Renamed `isConnecting` to `isLoading` (refactoring)
+- Lines 50-80: Added new `retryWithBackoff()` function (feature)
+- Lines 90-100: Fixed null check bug (bugfix)
+
+### Reconstruction Plan
+
+```
+Reference commit: xyz789
+
+Commit 1: fix(user): add null check before network call
+  - UserViewModel.kt lines 90-100: add safe call operator
+
+Commit 2: refactor(user): rename isConnecting to isLoading
+  - UserViewModel.kt lines 20-35: rename variable and usages
+
+Commit 3: feat(user): add retry with exponential backoff
+  - UserViewModel.kt lines 50-80: new function
+```
+
+### Why This Order?
+
+- Bugfix first - most likely to be cherry-picked or reverted independently
+- Refactoring second - pure rename, no behavior change
+- Feature last - new functionality built on clean foundation
+
+### Key Insight
+
+With tool-based splitting, you'd need TUI interaction to select specific lines from the same file. With manual reconstruction, you just implement each change separately - no tools needed.
+
+---
+
+## Example 3: Feature with Tests
+
+### The Messy Commit
+
+New authentication feature with:
+- `AuthRepository.kt` - new repository
+- `AuthViewModel.kt` - uses repository
+- `LoginScreen.kt` - UI
+- `AuthRepositoryTest.kt` - tests for repository
+- `AuthViewModelTest.kt` - tests for viewmodel
+
+### Reconstruction Plan
+
+```
+Commit 1: feat(auth): add authentication repository
+  - AuthRepository.kt (interface)
+  - AuthRepositoryImpl.kt (implementation)
+  - AuthRepositoryTest.kt (tests)
+
+Commit 2: feat(auth): add authentication viewmodel
+  - AuthViewModel.kt
+  - AuthViewModelTest.kt
+
+Commit 3: feat(auth): add login screen
   - LoginScreen.kt
-  - LoginComponents.kt
-  Reason: UI layer using ViewModel
 ```
 
-**Why good:** Each commit compiles, follows dependency order, can be bisected.
+### Key Insight
+
+Tests go with the code they test - not in a separate "add tests" commit. Each commit is independently testable and verifiable.
 
 ---
 
-### Example 2: Mixed Changes in Same Area
+## When NOT to Split
 
-**Changes:** OfflineScreen gets renamed variables + new feature
+### Example: Tightly Coupled Changes
 
-**Good split:**
-```
-Commit 1: refactor(offline): rename isConnecting to isLoading
-  - OfflineViewModel.kt
-  - OfflineScreen.kt
-  Reason: Naming improvement (independent)
+```kotlin
+// New data class
+data class UserPrefs(val theme: Theme, val language: String)
 
-Commit 2: feat(offline): add retry countdown timer
-  - OfflineViewModel.kt
-  - OfflineScreen.kt
-  Reason: New feature (independent)
+// Single place that uses it
+class SettingsScreen {
+    fun display(prefs: UserPrefs) { ... }
+}
 ```
 
-**Why good:** Each could be cherry-picked or reverted independently.
+**Don't split this.** The data class has no meaning without its consumer. One commit is correct:
+
+```
+feat(settings): add user preferences model and screen
+```
 
 ---
 
-### Example 3: Tightly Coupled Changes
+## Decision Guide
 
-**Changes:** New data class + single place that uses it
+Ask these questions:
 
-**Good approach - ONE commit:**
-```
-Commit 1: feat(user): add user preferences model and screen
-  - UserPreferences.kt (new model)
-  - PreferencesScreen.kt (uses model)
-  Reason: Tightly coupled, splitting breaks compilation
-```
+1. **Can each commit compile?**
+   - NO → Must be same commit or reorder
+   - YES → Continue
 
-**Why good:** Can't have consumer without model, no benefit to splitting.
+2. **Could this be cherry-picked independently?**
+   - YES → Consider splitting
+   - NO → Keep together
 
----
+3. **Would a reviewer understand this commit alone?**
+   - YES → Good split
+   - NO → Maybe combine with related changes
 
-## Bad Examples
-
-### Example 1: Split Too Granularly
-
-**Bad:**
-```
-Commit 1: rename variable foo to bar
-Commit 2: rename variable baz to qux
-Commit 3: rename function doThing to performAction
-Commit 4: add return type annotation
-```
-
-**Problem:** These are all part of one refactoring effort. Should be one commit.
+4. **Does the commit message need "and"?**
+   - YES → Probably should split
+   - NO → Probably fine
 
 ---
-
-### Example 2: Wrong Dependency Order
-
-**Bad:**
-```
-Commit 1: feat(ui): update screen to use new event type
-Commit 2: feat(model): add new event type
-```
-
-**Problem:** Commit 1 won't compile because the event type doesn't exist yet.
-
----
-
-### Example 3: Mixing Unrelated Changes
-
-**Bad:**
-```
-Commit 1: feat(auth): add login + fix typo in README + update CI config
-```
-
-**Problem:** Three unrelated things. Should be three commits.
-
----
-
-## Decision Flowchart
-
-```
-For each change, ask:
-
-1. Does this change compile alone?
-   NO  → Must be grouped with dependencies
-   YES → Continue
-
-2. Could this be cherry-picked independently?
-   YES → Consider splitting
-   NO  → Keep with related changes
-
-3. Does this serve the same logical purpose?
-   YES → Keep together
-   NO  → Split
-
-4. Would splitting break the "story" of the commit?
-   YES → Keep together
-   NO  → Split is fine
-```
-
-## Size Guidelines
-
-Research suggests optimal commit sizes for review:
-
-| Lines Changed | Review Quality |
-|---------------|----------------|
-| < 50 | Easy to review |
-| 50-200 | Good for review |
-| 200-400 | Acceptable |
-| 400-800 | Review quality drops |
-| > 800 | Significantly harder to review |
-
-**However:** Logic trumps size. A 500-line commit for one cohesive feature is better than 5 arbitrary 100-line commits.
 
 ## Sources
 
+- [Stacked Diffs - Pragmatic Engineer](https://newsletter.pragmaticengineer.com/p/stacked-diffs)
+- [Benefits of Stacked Diffs - Graphite](https://www.graphite.com/guides/benefits-of-stacked-diffs-in-code-review)
 - [Atomic Commits - LeanIX Engineering](https://engineering.leanix.net/blog/atomic-commit/)
-- [How Atomic Commits Increased Productivity - DEV Community](https://dev.to/samuelfaure/how-atomic-git-commits-dramatically-increased-my-productivity-and-will-increase-yours-too-4a84)
-- [Git Best Practices - freeCodeCamp](https://www.freecodecamp.org/news/git-best-practices-commits-and-code-reviews/)
-- [Commit Best Practices - AlgoMaster](https://algomaster.io/learn/git/commit-best-practices)
+- [Deliberate Practice for Programmers](https://www.freecodecamp.org/news/how-to-use-deliberate-practice-to-learn-programming-fast/)

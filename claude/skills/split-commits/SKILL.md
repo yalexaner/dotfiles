@@ -1,22 +1,25 @@
 ---
 name: split-commits
-description: Split large revisions into atomic, reviewable commits. Use when changes touch multiple unrelated areas, when preparing for code review, or when the user says "split commits".
-allowed-tools: Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(jj split:*), Bash(jj log:*), Bash(jj st:*), Bash(jj show:*), Bash(jj edit:*), Skill(commit:*)
+description: Split large revisions into atomic, reviewable commits using manual reconstruction. Use when changes touch multiple unrelated areas, when preparing for code review, or when the user says "split commits".
+allowed-tools: Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(jj new:*), Bash(jj log:*), Bash(jj st:*), Bash(jj show:*), Bash(jj edit:*), Bash(jj desc:*), Bash(jj abandon:*), Bash(jj bookmark:*), Read, Edit, Write
 argument-hint: [optional context or focus area]
 disable-model-invocation: true
 ---
 
-# Atomic Commit Splitting
+# Atomic Commit Splitting via Manual Reconstruction
 
-Split current changes into atomic, reviewable commits that support debugging, code review, and clean git history.
+Split changes into atomic commits by **rebuilding from the ground up**, not by using split/squash tools.
 
-## Automated Execution
+## The Approach
 
-This skill executes all splitting automatically without confirmation:
-- Analyze changes and determine optimal commit structure
-- Execute `jj split` commands
-- Run `/commit` on each revision
-- Verify with `jj log`, `jj st`, `jj show`
+Instead of using tools to move code between commits:
+
+1. **Keep the messy commit as a reference** (your cheat sheet)
+2. **Go back to the parent** (clean slate)
+3. **Manually re-implement** each logical change as a new commit
+4. **Build layer by layer** - foundation first, dependents on top
+
+This solves the problem of same-file splitting without TUI interaction.
 
 ## Context
 
@@ -24,190 +27,218 @@ This skill executes all splitting automatically without confirmation:
 - Branch: !`git branch --show-current`
 - Changes: !`git diff --stat`
 - Recent commits: !`git log --oneline -5`
+- Current jj log: !`jj log -n 5`
 - Full diff: !`git diff`
+
+## Why Manual Reconstruction (Not split/squash)
+
+| Tool-Based | Manual Reconstruction |
+|------------|----------------------|
+| Tools move code automatically | You implement code |
+| Requires TUI for same-file splits | No TUI needed |
+| "Which parts do I exclude?" | "What do I build first?" |
+| Passive - code moves as-is | Active - you understand each change |
+| Possible merge conflicts | Clean implementation |
 
 ## What Makes an Atomic Commit
 
 Each commit must be:
 
-1. **Single-purpose** - Does exactly one logical thing
-2. **Complete** - Compiles and passes tests independently
-3. **Bisectable** - Valid checkpoint for `git bisect` debugging
-4. **Reviewable** - Understandable without other commits
-5. **Revertable** - Can be rolled back safely
+1. **Single-purpose** - Does one logical thing
+2. **Compilable** - Builds independently
+3. **Bisectable** - Valid checkpoint for debugging
+4. **Reviewable** - Understandable in isolation
 
-**The "and" test**: If your commit message needs "and", split it.
-
-## When to Split
-
-| Split Into Separate Commits | Keep Together |
-|-----------------------------|---------------|
-| Bug fix + unrelated feature | Feature + its tests |
-| Refactoring + behavior change | Config + code using it |
-| Formatting + logic changes | Related model + consumer (if small) |
-| Independent changes in same file | Tightly coupled components |
-| Different components/features | Single logical unit |
-
-## When NOT to Split
-
-- All changes serve a single, clear purpose
-- Splitting would break compilation at any point
-- Changes are truly interdependent (can't exist alone)
+**The "and" test**: If commit message needs "and", split it.
 
 ## Dependency Order (Mandatory)
 
-Commits must be ordered so each one compiles:
+Build from foundation to top:
 
 ```
-Layer 1: Shared models/APIs (data classes, interfaces, enums)
+Layer 1: Shared models/APIs (data classes, interfaces)
     ↓
-Layer 2: Repository/Domain (implementations using new models)
+Layer 2: Repository/Domain (uses new models)
     ↓
-Layer 3: ViewModels/Controllers (using new repository methods)
+Layer 3: ViewModels/Controllers (uses repository)
     ↓
-Layer 4: UI (using ViewModel changes)
+Layer 4: UI (uses ViewModel)
 ```
 
-**Wrong** (breaks build):
+You cannot accidentally violate this - code won't compile if you try.
+
+## The Workflow
+
+### Phase 1: Analysis
+
+Examine the messy commit and create a reconstruction plan:
+
+1. **Identify logical changes** - What distinct things were done?
+2. **Determine layers** - Which dependency layer is each change?
+3. **Group by purpose** - What belongs together?
+4. **Order by dependency** - Foundation first
+
+**Output a clear plan:**
+
 ```
-Commit 1: ViewModel uses event.url  ← API doesn't exist yet!
-Commit 2: Add url field to Event   ← Too late
+RECONSTRUCTION PLAN
+
+Reference commit: <change-id>
+
+Commit 1 (Layer 1): <type>(<scope>): <description>
+  Files to implement:
+  - Model.kt: add new field "url" (lines 15-20 in reference)
+  - Event.kt: add new event type (lines 5-10 in reference)
+
+Commit 2 (Layer 3): <type>(<scope>): <description>
+  Files to implement:
+  - ViewModel.kt: use new event type (lines 45-60 in reference)
+  - ViewModel.kt: add loading state (lines 70-85 in reference)
+
+Commit 3 (Layer 4): <type>(<scope>): <description>
+  Files to implement:
+  - Screen.kt: display loading state (lines 30-50 in reference)
 ```
 
-**Correct**:
+### Phase 2: Setup
+
+```bash
+# 1. Note the messy commit ID (this is your reference)
+jj log -n 1
+# Reference: <messy-commit-id>
+
+# 2. Create a bookmark to preserve it
+jj bookmark create messy-reference -r @
+
+# 3. Go to parent (clean slate)
+jj new @-
+
+# Now you're at parent, ready to build fresh commits
 ```
-Commit 1: Add url field to Event   ← Foundation first
-Commit 2: ViewModel uses event.url ← Consumer second
+
+### Phase 3: Build Each Commit
+
+For each commit in the plan:
+
+```bash
+# 1. Create new empty commit
+jj new -m "WIP: <description>"
 ```
 
-## Analysis Process
+Then **manually implement** the changes for this commit:
+- Look at the reference commit (`jj show messy-reference`)
+- Read the specific sections noted in the plan
+- Type out / implement the changes (don't copy-paste large chunks)
+- Verify it compiles
 
-### 1. Internal Analysis (No Output)
+```bash
+# 2. After implementing, verify
+jj st                    # Check what you've added
+jj diff                  # Review your changes
 
-For each changed file, determine:
-- Is it a shared model/API? → Must be in earlier commit
-- Does it consume new APIs? → Must come after the API commit
-- What dependency layer is it?
-- Are there independent changes that could be cherry-picked separately?
+# 3. Update commit message
+jj desc -m "<proper commit message>"
 
-### 2. Grouping Rules
+# 4. Move to next commit
+jj new -m "WIP: <next description>"
+```
 
-After ensuring correct dependency order:
+Repeat for each commit in the plan.
 
-1. **Same layer + same component** → Group together
-2. **Same layer + related purpose** → Group together
-3. **Different layers** → Separate commits
-4. **Could be cherry-picked independently** → Consider separating
-5. **Unrelated areas** → Separate commits
+### Phase 4: Cleanup
 
-**Group by WHERE (component), not WHAT (type of change).**
+```bash
+# 1. Verify final structure
+jj log -n <count>
 
-### 3. Commit Size Guidance
+# 2. Verify each commit compiles (build/test each)
 
-- No fixed line count - focus on logical completeness
-- Prefer fewer meaningful commits over many tiny ones
-- Each should tell part of a coherent story
-- Aim for reviewable chunks (roughly 200-400 lines is optimal for review, but logic trumps size)
+# 3. Abandon the reference commit
+jj abandon messy-reference
+
+# 4. Delete the bookmark
+jj bookmark delete messy-reference
+```
+
+## My Role
+
+I will:
+
+1. **Analyze** the messy commit thoroughly
+2. **Create the reconstruction plan** with:
+   - Clear commit groupings
+   - Dependency order
+   - Specific file/line references for each commit
+3. **Guide you through setup** (creating bookmark, going to parent)
+4. **For each commit**:
+   - Tell you what to implement
+   - Show you the relevant parts of the reference
+   - Help you write the code if needed
+   - Verify the result
+5. **Handle cleanup** at the end
 
 ## Output Format
 
-### If No File Conflicts (Automated):
-
 ```
-**Proposed commits:**
+ANALYSIS COMPLETE
 
-1. <type>(<scope>): <description>
-   - file1.kt
-   - file2.kt
-   Reason: <why grouped>
-
-2. <type>(<scope>): <description>
-   - file3.kt
-   Reason: <why separate>
-
-Executing splits...
-```
-
-### If File Conflicts (Manual Required):
-
-```
-MANUAL SPLITTING REQUIRED
-
-**Proposed commits:**
-
-1. <type>(<scope>): <description>
-   - file1.kt
-   - file2.kt (partial - specific changes)
-   Reason: <explanation>
-
-2. <type>(<scope>): <description>
-   - file2.kt (partial - other changes)
-   Reason: <explanation>
+Reference commit: abc123 (bookmarked as "messy-reference")
 
 ---
 
-**Files with conflicts:**
+RECONSTRUCTION PLAN (3 commits)
 
-**file2.kt:**
-- Commit 1: Lines X-Y (what changes)
-- Commit 2: Lines A-B (what changes)
+1. feat(model): add url field to ValidationEvent
+   Layer: 1 (foundation)
+   Implement:
+   - ValidationEvent.kt: change "ip: String" to "url: String"
+
+   Reference (jj show messy-reference --path ValidationEvent.kt):
+   [relevant code snippet]
+
+2. refactor(viewmodel): update event handling
+   Layer: 3 (consumer)
+   Implement:
+   - SavedViewModel.kt: use event.url instead of event.ip
+   - ManualViewModel.kt: use event.url instead of event.ip
+
+   Reference snippets:
+   [relevant code snippets]
+
+3. feat(ui): add loading indicator
+   Layer: 4 (UI)
+   Implement:
+   - ConnectionScreen.kt: add CircularProgressIndicator when loading
+
+   Reference snippets:
+   [relevant code snippets]
 
 ---
 
-**Manual split instructions:**
-
-# Commit 1
-jj split -i
-# Include: file1.kt (all), file2.kt (only X-Y changes)
-
-# Commit 2
-jj split -i
-# Include: file2.kt (remaining changes)
-
-After splitting, run /commit on each revision.
+Ready to begin? I'll set up the reference bookmark and guide you through each commit.
 ```
-
-## Execution Steps
-
-1. **Split** with temporary messages:
-   ```bash
-   jj split file1.kt file2.kt -m "1"
-   jj split file3.kt -m "2"
-   ```
-
-2. **Verify**:
-   ```bash
-   jj log -n<count>
-   jj st
-   jj show <rev>
-   ```
-
-3. **Generate messages** (each revision):
-   ```bash
-   jj edit <rev>
-   /commit
-   ```
-
-4. **Show result**:
-   ```bash
-   jj log -n<count>
-   ```
 
 ## Rules
 
 **Do:**
-- Execute `jj split` automatically
-- Execute `/commit` automatically
-- Verify each step
-- Stop if file needs splitting across commits
+- Create detailed reconstruction plan with file/line references
+- Preserve messy commit as reference (bookmark)
+- Guide implementation commit by commit
+- Show relevant reference code for each step
+- Verify each commit compiles before moving on
+- Clean up reference at the end
 
 **Don't:**
-- Ask for confirmation
-- Use `git commit` or `git add`
-- Read files (analyze only diff output)
-- Split files appearing in multiple commits (detect and stop)
+- Use jj split or jj squash
+- Copy-paste large code blocks (implement instead)
+- Skip dependency order verification
+- Leave reference commit dangling
 
 ## Usage
 
-- `/split-commits` - Analyze and split current changes
-- `/split-commits focus on the API refactor` - Split with context
+- `/split-commits` - Analyze current changes and create reconstruction plan
+- `/split-commits focus on the refactoring` - Split with specific context
+
+## Additional Resources
+
+See [references/examples.md](references/examples.md) for detailed examples.
