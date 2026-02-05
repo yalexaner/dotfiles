@@ -2,7 +2,7 @@
 name: mr-review
 description: Comprehensive GitLab merge request review with architecture analysis, alternative approaches comparison, and code quality checks. Use when reviewing MRs, analyzing code changes, or when user mentions "review", "MR", "merge request", or "code review".
 argument-hint: [mr-number or branch-name] [jira-ticket-url]
-allowed-tools: Bash(glab:*), Bash(git:*), Read, Grep, Glob, WebFetch
+allowed-tools: Bash(glab mr view *), Bash(glab mr diff *), Bash(glab mr list *), Bash(glab mr issues *), Bash(git branch *), Bash(git log *), Bash(git diff *), Bash(git status *), Bash(git show *), Read, Grep, Glob, WebFetch
 ---
 
 # GitLab Merge Request Review
@@ -11,11 +11,8 @@ Perform a comprehensive code review of a GitLab merge request with deep analysis
 
 ## MR Context (Auto-Fetched)
 
-- MR Details: !`glab mr view --output json 2>/dev/null || echo "Run with MR number or from MR branch"`
-- MR Diff Summary: !`glab mr diff --color=never 2>/dev/null | head -200 || echo "No diff available"`
-- MR Comments: !`glab mr view --comments 2>/dev/null | head -100 || echo "No comments"`
 - Current Branch: !`git branch --show-current`
-- Changed Files: !`glab mr diff --color=never 2>/dev/null | grep "^diff --git" | sed 's/diff --git a\///' | sed 's/ b\/.*//' || git diff --name-only origin/main...HEAD 2>/dev/null`
+- MR Details: !`glab mr view 2>/dev/null || echo "No MR found for current branch"`
 
 ## Arguments
 
@@ -266,6 +263,7 @@ Produce a structured report with these sections:
 
 ## Additional Resources
 
+- For glab CLI command reference, see [references/glab-commands.md](references/glab-commands.md)
 - For detailed security and performance checklists, see [references/checklist.md](references/checklist.md)
 - Cross-reference findings with project's architecture documentation if available
 
