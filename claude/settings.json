@@ -1,11 +1,60 @@
 {
-  "includeCoAuthoredBy": false,
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  },
   "permissions": {
     "allow": [
-      "Bash(git.exe status)",
-      "Bash(git.exe diff:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(jj diff:*)",
+      "Bash(glab mr view:*)",
+      "Bash(grep:*)",
+      "WebSearch"
     ],
-    "deny": [],
-    "ask": []
-  }
+    "defaultMode": "default"
+  },
+  "hooks": {
+    "Notification": [
+      {
+        "matcher": "permission_prompt",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ \"$(osascript -e 'tell application \"System Events\" to get name of first process whose frontmost is true' 2>/dev/null)\" = 'wezterm-gui' ] || /opt/homebrew/bin/terminal-notifier -title 'Claude Code' -message 'Permission needed' -sound Glass -group claude",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "elicitation_dialog",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ \"$(osascript -e 'tell application \"System Events\" to get name of first process whose frontmost is true' 2>/dev/null)\" = 'wezterm-gui' ] || /opt/homebrew/bin/terminal-notifier -title 'Claude Code' -message 'Input needed' -sound Glass -group claude",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ \"$(osascript -e 'tell application \"System Events\" to get name of first process whose frontmost is true' 2>/dev/null)\" = 'wezterm-gui' ] || /opt/homebrew/bin/terminal-notifier -title 'Claude Code' -message 'Finished' -sound Purr -group claude",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "input=$(cat); remaining=$(echo \"$input\" | jq -r '.context_window.remaining_percentage // empty'); output=\"\"; if [ -n \"$remaining\" ]; then r=$(printf \"%.0f\" \"$remaining\"); if [ \"$r\" -gt 50 ]; then color=\"\\033[32m\"; elif [ \"$r\" -ge 20 ]; then color=\"\\033[33m\"; else color=\"\\033[31m\"; fi; filled=$((r / 10)); empty=$((10 - filled)); bar=\"\"; i=0; while [ \"$i\" -lt \"$filled\" ]; do bar=\"${bar}█\"; i=$((i + 1)); done; i=0; while [ \"$i\" -lt \"$empty\" ]; do bar=\"${bar}░\"; i=$((i + 1)); done; output=$(printf \"${color}${bar} ${r}%%\\033[0m\"); fi; jj_desc=$(jj log -r @ --no-graph -T 'description.first_line()' 2>/dev/null); if [ -n \"$jj_desc\" ]; then jj_desc_trimmed=$(echo \"$jj_desc\" | cut -c1-72); [ -n \"$output\" ] && output=\"$output │ \"; output=\"${output}${jj_desc_trimmed}\"; fi; [ -n \"$output\" ] && echo \"$output\""
+  },
+  "enabledPlugins": {
+    "clangd-lsp@claude-plugins-official": true
+  },
+  "autoUpdatesChannel": "stable"
 }
