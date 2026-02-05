@@ -27,7 +27,7 @@ this repository contains configuration files for:
 │       │   ├── SKILL.md       # main skill instructions
 │       │   └── references/
 │       │       └── types.md   # conventional commit types reference
-│       └── review-mr/         # gitlab merge request review skill
+│       └── mr-review/         # gitlab merge request review skill
 │           ├── SKILL.md       # main skill instructions
 │           └── references/
 │               └── checklist.md  # detailed review checklists

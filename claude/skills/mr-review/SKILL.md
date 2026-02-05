@@ -1,5 +1,5 @@
 ---
-name: review-mr
+name: mr-review
 description: Comprehensive GitLab merge request review with architecture analysis, alternative approaches comparison, and code quality checks. Use when reviewing MRs, analyzing code changes, or when user mentions "review", "MR", "merge request", or "code review".
 argument-hint: [mr-number or branch-name] [jira-ticket-url]
 allowed-tools: Bash(glab:*), Bash(git:*), Read, Grep, Glob, WebFetch
@@ -273,14 +273,14 @@ Produce a structured report with these sections:
 
 ```bash
 # Review MR by number
-/review-mr 123
+/mr-review 123
 
 # Review MR with Jira context
-/review-mr 123 https://jira.company.com/browse/PROJ-456
+/mr-review 123 https://jira.company.com/browse/PROJ-456
 
 # Review current branch's MR
-/review-mr
+/mr-review
 
 # Review by branch name
-/review-mr feature/new-auth
+/mr-review feature/new-auth
 ```
