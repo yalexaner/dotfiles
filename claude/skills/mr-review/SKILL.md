@@ -17,11 +17,22 @@ Perform a comprehensive code review of a GitLab merge request with deep analysis
 ## Arguments
 
 - **MR Identifier**: $ARGUMENTS[0] (MR number, branch name, or empty for current branch)
-- **Jira Ticket**: $ARGUMENTS[1] (optional Jira URL for problem context)
+- **Jira Ticket**: $ARGUMENTS[1] (optional Jira ticket key like STB-1417 or URL like https://ksu.nag.ru/browse/STB-1417)
 
 ## Review Process
 
 Execute this review in **7 phases**, producing a structured report at the end.
+
+---
+
+### Phase 0: Collect Missing Context
+
+Before starting the review, check if required context is available:
+
+1. **Jira Ticket**: If $ARGUMENTS[1] is not provided:
+   - Check the MR description for a Jira ticket key (pattern: `[A-Z]+-\d+`, e.g. STB-1417)
+   - If not found in MR description, **ask the user** for the Jira ticket key or URL
+   - It is acceptable if the user has no ticket - proceed without it
 
 ---
 
@@ -39,9 +50,14 @@ glab mr diff $0 --color=never --raw
 glab mr view $0 --comments --system-logs
 ```
 
-**1.2 Fetch Jira Context** (if provided)
-- Use WebFetch to retrieve the Jira ticket description
-- Extract: problem statement, acceptance criteria, requirements
+**1.2 Fetch Jira Context**
+Once you have a Jira ticket key or URL (from arguments, MR description, or user input), invoke the `/jira` skill to fetch full ticket details:
+```
+/jira <ticket-key-or-url>
+```
+Extract from the ticket: problem statement, acceptance criteria, requirements, and any relevant comments.
+
+If no Jira ticket is available, rely on the MR description for problem understanding.
 
 **1.3 Analyze Local Changes**
 - Read all changed files completely
