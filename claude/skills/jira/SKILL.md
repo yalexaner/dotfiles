@@ -3,6 +3,7 @@ name: jira
 description: Fetch and display Jira ticket details. Use when the user mentions a Jira ticket key (like STB-1417) or a Jira URL (like https://ksu.nag.ru/browse/STB-1417).
 argument-hint: [ticket-key or URL]
 compatibility: Requires python3, curl, and ~/.netrc with basic auth credentials for ksu.nag.ru
+allowed-tools: Bash(python3 *)
 ---
 
 # Fetch Jira Ticket
