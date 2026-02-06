@@ -2,12 +2,18 @@
 name: mr-review
 description: Comprehensive GitLab merge request review with architecture analysis, alternative approaches comparison, and code quality checks. Use when reviewing MRs, analyzing code changes, or when user mentions "review", "MR", "merge request", or "code review".
 argument-hint: [mr-number or branch-name] [jira-ticket-url]
-allowed-tools: Bash(glab mr view *), Bash(glab mr diff *), Bash(glab mr list *), Bash(glab mr issues *), Bash(git branch *), Bash(git log *), Bash(git diff *), Bash(git status *), Bash(git show *), Read, Grep, Glob, WebFetch
+allowed-tools: Bash(glab mr view *), Bash(glab mr diff *), Bash(glab mr list *), Bash(glab mr issues *), Bash(git branch *), Bash(git log *), Bash(git diff *), Bash(git status *), Bash(git show *), Skill(jira *), Read, Grep, Glob, WebFetch
 ---
 
 # GitLab Merge Request Review
 
 Perform a comprehensive code review of a GitLab merge request with deep analysis of problem understanding, solution approaches, implementation quality, and architectural fit.
+
+**Important glab CLI rules:**
+- There is NO `--state` flag in `glab mr list`. Use `--closed`, `--merged`, `--all`, or default (open)
+- The `-s` flag is `--source-branch`, NOT state
+- `glab mr view` / `glab mr diff` without arguments use the current branch's MR
+- For full command reference, see [references/glab-commands.md](references/glab-commands.md)
 
 ## MR Context (Auto-Fetched)
 
@@ -29,9 +35,11 @@ Execute this review in **7 phases**, producing a structured report at the end.
 
 Before starting the review, check if required context is available:
 
-1. **Jira Ticket**: If $ARGUMENTS[1] is not provided:
-   - Check the MR description for a Jira ticket key (pattern: `[A-Z]+-\d+`, e.g. STB-1417)
-   - If not found in MR description, **ask the user** for the Jira ticket key or URL
+1. **Jira Ticket**: Resolve the ticket key using this priority:
+   1. Use $ARGUMENTS[1] if provided
+   2. Extract from MR title (pattern: `[A-Z]+-\d+`, e.g. "STB-1417 [OTAUpdater]..." or "STB-1343: Доработка...")
+   3. Extract from MR description or branch name
+   4. **Ask the user** for the Jira ticket key or URL
    - It is acceptable if the user has no ticket - proceed without it
 
 ---
