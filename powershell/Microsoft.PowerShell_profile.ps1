@@ -312,13 +312,20 @@ Set-Alias -Name explore -Value Open-Explorer
 # Import PSReadLine and enable history-based predictions
 Import-Module PSReadLine
 
-# Use history for prediction; you can also try Plugin for community plugins later
+# Use history for prediction with inline greyed-out suggestions (like zsh-autosuggestions)
 Set-PSReadLineOption -PredictionSource History
-Set-PSReadLineOption -PredictionViewStyle ListView   # shows a dropdown list
+Set-PSReadLineOption -PredictionViewStyle InlineView
+
+# Accept entire inline suggestion with Ctrl+F (like zsh on macOS)
+Set-PSReadLineKeyHandler -Key Ctrl+f -Function AcceptSuggestion
 
 # Fuzzy-match tab completion
 Set-PSReadLineOption -CompletionQueryItems 100       # more candidates
 Set-PSReadLineOption -HistorySearchCursorMovesToEnd  # Emacs-style history search
+
+# Ctrl+R fuzzy history search via fzf (like zsh + fzf on macOS)
+Import-Module PSFzf
+Set-PsFzfOption -PSReadlineChordProvider 'Ctrl+t' -PSReadlineChordReverseHistory 'Ctrl+r'
 
 # JJ autocomplete
 Invoke-Expression (& { (jj util completion power-shell | Out-String) })
