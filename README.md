@@ -77,6 +77,7 @@ this repository contains configuration files for:
    **claude**:
    ```bash
    # copy configuration and skills
+   mkdir -p ~/.claude
    cp -r claude/* ~/.claude/
    ```
 
