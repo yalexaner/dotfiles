@@ -87,7 +87,8 @@ Ask the user: "Push `<name>` to remote?"
 
 If yes:
 ```bash
-jj git push -b <name>
+jj git push -b <name> --allow-new  # for new bookmarks not yet on remote
+jj git push -b <name>              # for existing remote bookmarks
 ```
 
 If no, skip.
