@@ -32,10 +32,11 @@ Stop and wait for the user.
 
 ### 2. Detect Action
 
-Check "Bookmark on @" from context above:
+Check "Bookmark on @" and "Nearest ancestor bookmark" from context above:
 
-- **Has bookmark** → go to step 4 (move existing)
-- **No bookmark** → go to step 3 (create new)
+- **Has bookmark on @** → go to step 4 (move existing)
+- **No bookmark on @, but nearest ancestor bookmark exists** → go to step 4 (move existing)
+- **No bookmark at all** → go to step 3 (create new)
 
 ### 3. Create New Bookmark
 
@@ -63,7 +64,7 @@ Go to step 5.
 
 ### 4. Move Existing Bookmark
 
-The bookmark already exists on `@`. Check if there are new revisions beyond the bookmark that need to be included.
+The bookmark exists on `@` or on a nearest ancestor. Use the bookmark name from whichever context field matched.
 
 If the bookmark is on an ancestor (not on `@` itself), move it forward:
 ```bash
