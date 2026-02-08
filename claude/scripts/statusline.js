@@ -6,7 +6,7 @@ process.stdin.on('data', chunk => data += chunk);
 process.stdin.on('end', () => {
   try {
     const j = JSON.parse(data);
-    const p = Math.round(j.context_window.remaining_percentage);
+    const p = Math.round(j.context_window?.remaining_percentage ?? 100);
     const f = Math.floor(p / 10);
     const e = 10 - f;
     const color = p > 50 ? '\x1b[32m' : p >= 20 ? '\x1b[33m' : '\x1b[31m';
