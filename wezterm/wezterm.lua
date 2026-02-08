@@ -85,6 +85,14 @@ local resize_keys = {
 	{ key = "DownArrow", mods = "ALT|SHIFT", action = act.AdjustPaneSize({ "Down", 2 }) },
 }
 
+-- --- Shell Passthrough ---
+-- let ctrl+f and ctrl+r reach the shell for psreadline/psfzf
+-- wezterm search is still available via ctrl+shift+f, reload via alt+r
+local passthrough_keys = {
+	{ key = "f", mods = "CTRL", action = act.SendKey({ key = "f", mods = "CTRL" }) },
+	{ key = "r", mods = "CTRL", action = act.SendKey({ key = "r", mods = "CTRL" }) },
+}
+
 -- --- Configuration & Utilities ---
 local config_keys = {
   { key = "r", mods = "ALT", action = act.ReloadConfiguration },
@@ -116,7 +124,7 @@ else { Write-Host 'No editor (neovide/nvim/vim) found in PATH'; Start-Sleep -Sec
 }
 
 -- combine all keybindings
-for _, group in ipairs({ tab_keys, tab_number_keys, pane_keys, split_keys, resize_keys, config_keys }) do
+for _, group in ipairs({ tab_keys, tab_number_keys, pane_keys, split_keys, resize_keys, passthrough_keys, config_keys }) do
 	for _, key in ipairs(group) do
 		table.insert(keys, key)
 	end
