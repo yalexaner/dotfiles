@@ -13,6 +13,7 @@ this repository contains configuration files for:
 
 - **claude ai**: ai assistant configuration with custom skills and settings
 - **powershell**: comprehensive profile with utility functions and aliases
+- **starship**: cross-shell prompt with jj integration and catppuccin mocha theme
 - **wezterm**: terminal emulator configuration with custom keybindings and themes
 
 ## structure
@@ -33,6 +34,9 @@ this repository contains configuration files for:
 │               └── checklist.md  # detailed review checklists
 ├── powershell/
 │   └── Microsoft.PowerShell_profile.ps1  # powershell profile with utilities
+├── starship/
+│   ├── starship.toml          # prompt configuration
+│   └── jj-prompt.sh           # jujutsu prompt helper script
 └── wezterm/
     └── wezterm.lua            # terminal configuration
 ```
@@ -63,6 +67,13 @@ this repository contains configuration files for:
 - **here/explore**: open file explorer in current directory
 - psreadline integration with history-based predictions
 - jj version control system autocomplete
+
+### starship prompt
+- two-line prompt with connecting line (╭/╰)
+- catppuccin mocha color palette
+- jj integration: branch display (closest bookmark) and status (dirty/clean + description)
+- os icon, directory path, command duration
+- vim mode indicator
 
 ### wezterm terminal
 - catppuccin mocha color scheme
@@ -98,6 +109,11 @@ this repository contains configuration files for:
    copy powershell/Microsoft.PowerShell_profile.ps1 $PROFILE
    ```
 
+   **starship** (macOS):
+   ```bash
+   bash scripts/macos/install-starship.sh
+   ```
+
    **wezterm**:
    ```bash
    # windows
@@ -113,6 +129,12 @@ this repository contains configuration files for:
 - powershell 7+
 - psreadline module
 - jj version control system (for autocomplete)
+
+### starship
+- starship prompt
+- jj version control system
+- zsh shell
+- jetbrainsmono nerd font
 
 ### wezterm
 - wezterm terminal emulator
