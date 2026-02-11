@@ -37,6 +37,8 @@
       "Bash(find:*)",
       "Bash(jq:*)",
       "Bash(glab mr diff:*)",
+      "Skill(mr-review)",
+      "Skill(jira)",
       "WebSearch",
       "WebFetch"
     ],
