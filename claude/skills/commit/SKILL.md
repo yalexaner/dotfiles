@@ -73,6 +73,8 @@ After committing, output only:
 Commit created: <type>(<scope>): <subject>
 ```
 
+Then suggest: "Run /branch to create or update a bookmark for this change."
+
 ## Additional Resources
 
 - [Commit types reference](references/types.md) - complete list of types with descriptions
