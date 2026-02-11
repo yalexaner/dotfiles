@@ -17,6 +17,8 @@ Run three independent reviews in parallel — Claude Code (`/mr-review`), Codex 
 
 > **Critical rule**: Every Bash command must be a standalone call. NEVER combine commands with `||`, `&&`, `|`, or `;`. Handle errors and fallbacks in skill logic — run one command, check its output, then decide what to do next. Compound commands break the permission system and will trigger approval prompts.
 
+> **Language rule**: The entire report must be written in English. All findings, explanations, suggestions, architecture assessments, and questions must be in English. The only exception is direct quotes from source materials (reviewer comments, MR descriptions, Jira tickets) — these may remain in their original language when explicitly quoted.
+
 ## Pre-flight
 
 - Codex installed: !`which codex 2>/dev/null || echo "NOT_FOUND"`
@@ -225,10 +227,11 @@ Combine architecture and testing opinions from all available sources into unifie
 
 1. Load the report template from [references/report-format.md](references/report-format.md)
 2. Fill in all sections following the template and its filling instructions
-3. Group findings by severity: Must Fix → Should Fix → Nit
-4. Within each group, order by priority (highest impact first)
-5. Each finding: `[tag] **summary**` / `file:lines` on separate lines / merged explanation / `→ suggestion`
-6. Include file:line references on every finding
+3. Write everything in English (see Language rule above — only direct quotes may stay in original language)
+4. Group findings by severity: Must Fix → Should Fix → Nit
+5. Within each group, order by priority (highest impact first)
+6. Each finding: `[tag] **summary**` / `file:lines` on separate lines / merged explanation / `→ suggestion`
+7. Include file:line references on every finding
 
 ### Claude-Only Mode
 
