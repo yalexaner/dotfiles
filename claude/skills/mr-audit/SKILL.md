@@ -6,7 +6,7 @@ description: >-
   confidence-tiered report. Use when you want a thorough multi-perspective merge request review.
 argument-hint: [mr-number] [jira-ticket]
 disable-model-invocation: true
-allowed-tools: Bash(codex exec *), Bash(which *), Bash(glab mr view *), Bash(glab mr diff *), Bash(glab mr list *), Bash(git branch *), Bash(git log *), Bash(git diff *), Bash(jj log *), Bash(jj show *), Bash(jq *), Read, Grep, Glob, Skill(mr-review *), Skill(jira *)
+allowed-tools: Bash(codex exec *), Bash(which *), Bash(glab mr view *), Bash(glab mr diff *), Bash(glab mr list *), Bash(git log *), Bash(git diff *), Bash(jj log *), Bash(jj show *), Bash(jq *), Read, Grep, Glob, Skill(mr-review *), Skill(jira *)
 metadata:
   compatibility: Requires codex CLI (npm i -g @openai/codex), glab CLI, and Codex skills (jira, mr-review) in ~/.codex/skills/. See references/SETUP.md. Degrades gracefully to Claude-only if Codex is unavailable.
 ---
@@ -15,10 +15,12 @@ metadata:
 
 Run three independent reviews in parallel — Claude Code (`/mr-review`), Codex skill-based (`$mr-review`), and Codex built-in code review — then cross-validate findings against the codebase and compile a single confidence-tiered report.
 
+> **Critical rule**: Every Bash command must be a standalone call. NEVER combine commands with `||`, `&&`, `|`, or `;`. Handle errors and fallbacks in skill logic — run one command, check its output, then decide what to do next. Compound commands break the permission system and will trigger approval prompts.
+
 ## Pre-flight
 
 - Codex installed: !`which codex 2>/dev/null || echo "NOT_FOUND"`
-- Current branch: !`git branch --show-current`
+- Current bookmark: !`jj log -r 'ancestors(@) & bookmarks()' --limit 1 --no-graph -T 'bookmarks.join(", ")' 2>/dev/null`
 - Working directory: !`pwd`
 - JJ status: !`jj log -r @ --no-graph -T 'self.change_id().shortest(8) ++ " " ++ branches' 2>/dev/null || echo "NO_JJ"`
 - MR info: !`glab mr view 2>/dev/null || echo "NO_MR"`
@@ -39,22 +41,34 @@ All three reviews need the same MR and Jira ticket. Resolve both upfront so ever
 Use this priority:
 1. $ARGUMENTS[0] if provided — use as MR number or branch name
 2. Pre-flight MR info — if it found an MR for the current branch, use that
-3. **If neither works**: Run `glab mr list` (lists open MRs by default) and present the list to the user to pick from
+3. **If neither works**: Run `glab mr list -P 10` (lists open MRs by default, limited to 10) and present the list to the user to pick from
 4. If no open MRs exist — abort, nothing to review
 
 **Important**: `glab mr list` has no `--state` flag — see [references/glab-flags.md](references/glab-flags.md) for correct flags.
 
 ### 0.2 Fetch MR Details
 
-Once the MR is determined, run `glab mr view {MR_NUMBER}` (if not already in pre-flight) to get the full title, description, author, source branch, and target branch.
+Run this exact command:
+
+    glab mr view {MR_NUMBER} -F json
+
+Parse these fields from the JSON output:
+- `source_branch` — the MR's source branch
+- `target_branch` — the MR's target branch
+- `title` — MR title
+- `description` — MR description
+- `author.username` — MR author
+
+Do NOT use `glab api`, pipes, or any other command to get this information.
 
 ### 0.3 Verify Working Copy
 
 All three reviews read files from the local working tree. If the checkout doesn't match the MR source branch, reviews will analyze wrong code.
 
-1. Compare the MR **source branch** (from 0.2) with the current branch (from pre-flight)
-2. If using jj (pre-flight JJ status is not `NO_JJ`): check that the current jj revision is on or descends from the MR source branch. Use `jj log` to verify.
-3. **If mismatched**: Warn the user that their working copy is on a different branch and ask whether to proceed anyway or switch first. Do NOT switch automatically — the user may have uncommitted work.
+1. Get the current bookmark from pre-flight
+2. Compare it with the MR `source_branch` (from Phase 0.2)
+3. If they match — working copy is correct
+4. If they don't match or pre-flight returned empty — warn the user and ask whether to proceed or switch first. Do NOT switch automatically.
 
 ### 0.4 Extract Jira Ticket
 
@@ -72,7 +86,9 @@ If pre-flight shows `NOT_FOUND`, set mode to **Claude-Only** and skip to Phase 1
 
 Derive the project name from the last segment of the working directory path (pre-flight). Use it for uniqueness across parallel runs:
 - Codex skill review: `/tmp/codex-mr-review-{PROJECT}-{MR_NUMBER}.md`
-- Codex built-in raw: `/tmp/codex-builtin-raw-{PROJECT}-{MR_NUMBER}.jsonl`
+- Codex built-in raw JSONL: `/tmp/codex-builtin-raw-{PROJECT}-{MR_NUMBER}.jsonl`
+
+The Codex built-in review text is extracted from the JSONL via `jq` at processing time — no separate file needed.
 - Codex built-in review: `/tmp/codex-builtin-review-{PROJECT}-{MR_NUMBER}.md`
 
 ---
@@ -106,10 +122,12 @@ codex exec review --base {TARGET_BRANCH} --full-auto --json > "/tmp/codex-builti
 **Step 2** — extract the review text (after background task completes):
 
 ```bash
-jq -rs '[.[] | select(.type=="item.completed" and .item.type=="agent_message") | .item.text] | last // ""' "/tmp/codex-builtin-raw-{PROJECT}-{MR_NUMBER}.jsonl" > "/tmp/codex-builtin-review-{PROJECT}-{MR_NUMBER}.md"
+jq -rs '[.[] | select(.type=="item.completed" and .item.type=="agent_message") | .item.text] | last // ""' "/tmp/codex-builtin-raw-{PROJECT}-{MR_NUMBER}.jsonl"
 ```
 
-**Note**: The pipe is split into two steps because Claude Code's Bash tool breaks pipe operators — see [references/codex-review-bug.md](references/codex-review-bug.md) for why `--json` + `jq` is needed instead of `-o`.
+The review text is returned as Bash output — do NOT redirect to a file with `>` (redirects are shell operators that break permission auto-approval). Hold the output for use in Phase 3.
+
+**Note**: These are two separate Bash calls, not a pipe. See the global rule about standalone commands. See [references/codex-review-bug.md](references/codex-review-bug.md) for why `--json` + `jq` is needed instead of `-o`.
 
 ### 1C: Claude Review (foreground)
 
@@ -127,13 +145,26 @@ If no ticket was found, omit it: `/mr-review {MR_NUMBER}`
 
 After `/mr-review` finishes:
 
-1. Check if both Codex background tasks have completed
-2. If either is still running, wait for completion
-3. Run the Phase 1B Step 2 `jq` extraction on the raw JSONL file to produce the final review file
-4. Read both output files:
-   - `/tmp/codex-mr-review-{PROJECT}-{MR_NUMBER}.md`
-   - `/tmp/codex-builtin-review-{PROJECT}-{MR_NUMBER}.md`
-5. **Degrade gracefully** per source:
+### Waiting for background tasks
+
+Use `TaskOutput` with `block=true` to wait. It long-polls — returns instantly when the task completes, or after the timeout if still running. It does NOT sleep for the full timeout.
+
+For each background task:
+1. Call `TaskOutput(task_id, block=true, timeout=600000)` — waits up to 10 min
+2. If the task is still running, call `TaskOutput` again (another 10 min)
+3. Repeat up to 3 times total (30 min maximum)
+4. After 30 min: stop the task with `TaskStop`, skip that source, degrade gracefully
+
+Do NOT stop background tasks before the 30-minute limit. Codex reviews can legitimately take 15-20 minutes on large MRs.
+
+**Fallback**: If `TaskOutput` behaves unexpectedly (hangs, returns no data), check the output files directly with Read. A non-empty output file may indicate completion even if TaskOutput didn't report it.
+
+### Processing results
+
+1. Run the Phase 1B Step 2 `jq` command on the raw JSONL file — the review text comes back as Bash output
+2. Read the Codex skill review file: `/tmp/codex-mr-review-{PROJECT}-{MR_NUMBER}.md`
+3. You now have all three reviews: Claude (from Phase 1C), Codex skill (from the file), Codex built-in (from jq output)
+4. **Degrade gracefully** per source:
    - If a file is missing, empty, or contains error output → exclude that source
    - Note which sources are available for the final report
    - If both Codex sources failed → Claude-Only mode
@@ -205,23 +236,6 @@ If Codex was unavailable or both Codex sources failed:
 - Omit consensus tags, omit Dismissed section
 - Add a note at the top: "**Mode: Claude-Only** — {reason}"
 - Use Claude review findings directly, organized by severity
-
----
-
-## Phase 5: Preserve & Fork
-
-After the report is output, preserve this session as a review reference and offer to fork for follow-up work.
-
-1. Run `/rename` with a descriptive name:
-   ```
-   /rename REVIEW {TICKET} MR!{MR_NUMBER} {short MR title}
-   ```
-   Example: `/rename REVIEW STB-1417 MR!3 Fix InstallDeviceOpenError`
-
-2. Tell the user the session has been renamed, then suggest:
-   ```
-   Run /fork to start a new session with this review as context.
-   ```
 
 ---
 
