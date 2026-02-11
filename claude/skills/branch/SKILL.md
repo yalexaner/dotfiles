@@ -3,7 +3,7 @@ name: branch
 description: Creates and manages jj bookmarks with conventional branch naming. Analyzes changes to generate descriptive names, moves existing bookmarks forward, and optionally pushes to remote.
 disable-model-invocation: true
 argument-hint: [branch name or description of work]
-allowed-tools: Bash(jj *), Bash(git diff:*), Bash(git log:*)
+allowed-tools: Bash(jj bookmark:*), Bash(jj log:*), Bash(jj diff:*), Bash(jj new:*), Bash(git diff:*), Bash(git log:*)
 ---
 
 # Branch Management with Jujutsu
@@ -84,15 +84,10 @@ jj new
 
 ### 6. Push
 
-Ask the user: "Push `<name>` to remote?"
+Push the bookmark to remote. The user will approve or deny via the tool permission prompt.
 
-If yes:
-```bash
-jj git push -b <name> --allow-new  # for new bookmarks not yet on remote
-jj git push -b <name>              # for existing remote bookmarks
-```
-
-If no, skip.
+- **New bookmark** (not yet on remote): `jj git push -b <name> --allow-new`
+- **Existing bookmark** (already on remote): `jj git push -b <name>`
 
 ## Output
 
@@ -104,7 +99,7 @@ Status: <pushed to remote | local only>
 
 ## Rules
 
-- **never** push without asking the user first
+- always attempt to push — the user controls approval via the tool permission prompt
 - **never** use `git branch`, `git checkout`, or `git push` — jj commands only
 - **never** create a bookmark if the current rev has uncommitted, undescribed changes
 - always lowercase comments and descriptions per project conventions
