@@ -3,7 +3,7 @@ name: brainstorm
 description: Deep-dive analysis of a Jira ticket with parallel codebase exploration. Fetches ticket requirements, launches Claude subagents and Codex in parallel to analyze related code, cross-references findings, and presents a structured report. Use when starting work on a new ticket, investigating a problem, or planning an implementation.
 argument-hint: [jira-ticket-key-or-url] [optional focus area]
 disable-model-invocation: true
-allowed-tools: Skill(jira *), Task, Read, Grep, Glob, Bash(pwd), Bash(git log:*), Bash(git diff:*), Bash(git status:*), Bash(codex exec *), Bash(which *), Bash(jq *), AskUserQuestion, EnterPlanMode
+allowed-tools: Skill(jira *), Task, Read, Grep, Glob, Bash(pwd), Bash(jj log *), Bash(jj diff *), Bash(jj show *), Bash(codex exec *), Bash(which *), Bash(jq *), AskUserQuestion, EnterPlanMode
 metadata:
   compatibility: Codex CLI optional (npm i -g @openai/codex). Degrades gracefully to Claude-only if Codex is unavailable.
 ---
@@ -12,18 +12,26 @@ metadata:
 
 Deep-dive analysis of a Jira ticket: fetch requirements, explore the codebase with parallel Claude agents and Codex, cross-reference findings, and present a structured report.
 
-## Context
+> **Critical rule**: Every Bash command must be a standalone call. NEVER combine commands with `||`, `&&`, `|`, or `;`. Handle errors and fallbacks in skill logic — run one command, check its output, then decide what to do next. Compound commands break the permission system and will trigger approval prompts.
 
-- **Working directory:** !`pwd`
-- **User input:** $ARGUMENTS
+> **Language rule**: The entire report must be written in English. All findings, explanations, suggestions, architecture assessments, and questions must be in English. The only exception is direct quotes from source materials (Jira tickets, comments) — these may remain in their original language when explicitly quoted.
+
+## Arguments
+
+- **Ticket**: $ARGUMENTS[0] (Jira ticket key like SWITCH-2945 or URL like https://ksu.nag.ru/browse/SWITCH-2945)
+- **Focus area**: $ARGUMENTS[1..] (optional — narrows the analysis scope)
+
+## Pre-flight
+
+- Codex installed: !`which codex 2>/dev/null || echo "NOT_FOUND"`
+- Current bookmark: !`jj log -r 'ancestors(@) & bookmarks()' --limit 1 --no-graph -T 'bookmarks.join(", ")' 2>/dev/null`
+- JJ status: !`jj log -r @ --no-graph -T 'self.change_id().shortest(8) ++ " " ++ branches' 2>/dev/null || echo "NO_JJ"`
+- Working directory: !`pwd`
+- User input: $ARGUMENTS
 
 ## Phase 0: Acquire Ticket Context
 
 **Goal:** Get the Jira ticket requirements as the foundation for all analysis.
-
-### 0.0 Check Codex Availability
-
-Run `which codex` to determine if Codex CLI is installed. If the command fails or returns empty, Codex is unavailable — proceed Claude-only for the rest of the session.
 
 ### 0.1 Resolve Ticket
 
@@ -54,6 +62,15 @@ From the Jira ticket (or manual description), extract and summarize:
 - **Acceptance criteria**: What "done" looks like
 
 Present this summary to the user before proceeding.
+
+### 0.3 Verify Working Copy
+
+The codebase analysis reads files from the local working tree. If the checkout doesn't match the expected branch, agents will analyze wrong code.
+
+1. Get the current bookmark from pre-flight
+2. If the ticket mentions a specific branch, compare the bookmark against it
+3. If they match or the ticket doesn't mention a branch — proceed
+4. If they don't match or pre-flight returned empty — warn the user and ask whether to proceed or switch first. Do NOT switch automatically.
 
 ---
 
@@ -92,7 +109,7 @@ Perform independent deep analysis:
 - Look for things the first agent might miss
 
 **Agent 3 — Codex** (Bash, `run_in_background: true`):
-Launch only if step 0.0 confirmed Codex is installed. If unavailable, skip and work Claude-only.
+Launch only if pre-flight confirmed Codex is installed. If pre-flight shows `NOT_FOUND`, skip and work Claude-only.
 
 Derive `{PROJECT}` from the last path segment of the working directory and `{TICKET}` from the ticket key.
 
@@ -116,11 +133,17 @@ The `{CODEX_PROMPT}` should be a comprehensive analysis request similar to Agent
 
 ### 1.3 Wait and Collect
 
-Wait for all agents to complete:
-1. Use `TaskOutput` to collect Claude agent results as they finish
-2. When the Codex background Bash task completes, read its output file:
-   `/tmp/codex-brainstorm-{PROJECT}-{TICKET}.md`
-3. If the Codex output file is empty or contains errors, note it and proceed Claude-only
+Use `TaskOutput` with `block=true` to wait. It long-polls — returns instantly when the task completes, or after the timeout if still running. It does NOT sleep for the full timeout.
+
+For each background task:
+1. Call `TaskOutput(task_id, block=true, timeout=600000)` — waits up to 10 min
+2. If the task is still running, call `TaskOutput` again (another 10 min)
+3. Repeat up to 3 times total (30 min maximum)
+4. After 30 min: stop the task with `TaskStop`, skip that source, degrade gracefully
+
+**Codex output**: When the Codex background Bash task completes, read its output file: `/tmp/codex-brainstorm-{PROJECT}-{TICKET}.md`. If the file is empty or contains errors, note it and proceed Claude-only.
+
+**Fallback**: If `TaskOutput` behaves unexpectedly (hangs, returns no data), check the output files directly with Read. A non-empty output file may indicate completion even if TaskOutput didn't report it.
 
 Do not proceed to Phase 2 until all agents have reported back.
 
@@ -280,6 +303,20 @@ Before presenting the report:
 - **never** skip Phase 2 verification — even if agents agree, verify critical claims against code
 - **never** proceed to Phase 3 before all agents have reported back
 - **never** include file paths or line numbers without verifying they are accurate
+
+---
+
+## Error Handling
+
+| Scenario | Response |
+|----------|----------|
+| Codex not installed | Proceed Claude-only; note in report |
+| Codex output failed | Exclude Codex source, note reason, proceed Claude-only |
+| Jira skill fails | Ask user for manual description, proceed without Jira |
+| Subagent launch fails | Retry once; if still fails, degrade to fewer agents |
+| TaskOutput timeout (30 min) | Stop the task with `TaskStop`, exclude that source |
+| Working copy mismatch | Warn user, ask to proceed or switch; never switch automatically |
+| Verification agent fails | Flag the finding as `[unverified]`, do not present as fact |
 
 ---
 
