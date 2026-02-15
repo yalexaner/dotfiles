@@ -15,6 +15,7 @@ format = '[$symbol ](overlay1)'
 [os.symbols]
 Macos = "󰀵"
 Linux = "󰌽"
+Windows = "󰍲"
 
 [directory]
 style = "bold lavender"
