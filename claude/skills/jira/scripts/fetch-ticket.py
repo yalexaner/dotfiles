@@ -2,12 +2,14 @@
 """Fetch a Jira ticket via REST API and display it in a readable format."""
 
 import base64
+import html as html_mod
 import json
 import os
 import re
 import sys
 import urllib.request
 import urllib.error
+import urllib.parse
 import netrc
 
 CONFIG_PATH = os.path.expanduser("~/.claude/jira-config.json")
@@ -36,15 +38,17 @@ def print_setup_guide(reason):
     print()
     print(f"## 1. Config file: {CONFIG_PATH}")
     print()
-    print("Create the file with your Jira base URL:")
+    print("Create the file with your Jira (and optionally Confluence) base URLs:")
     print()
     print("```json")
     print('{')
-    print('  "jira_base": "https://your-jira-instance.example.com"')
+    print('  "jira_base": "https://your-jira-instance.example.com",')
+    print('  "confluence_base": "https://your-confluence-instance.example.com"')
     print('}')
     print("```")
     print()
     print("- `jira_base` (required): your Jira Server URL")
+    print("- `confluence_base` (optional): your Confluence URL, if ticket descriptions link to Confluence pages")
     print()
     print("## 2. Credentials: ~/.netrc")
     print()
@@ -61,6 +65,10 @@ def print_setup_guide(reason):
     print("```bash")
     print("chmod 600 ~/.netrc")
     print("```")
+    print()
+    print("If your Confluence instance shares the same user directory (common with Atlassian products),")
+    print("the Jira credentials will be reused automatically. Otherwise, add a separate entry for the")
+    print("Confluence host.")
     print()
     print("## 3. Verify")
     print()
@@ -193,6 +201,105 @@ def safe(obj, *keys, default="None"):
     return obj if obj is not None else default
 
 
+def extract_confluence_urls(text, config):
+    """Extract Confluence page URLs from text, return list of (url, page_id) tuples."""
+    confluence_base = config.get("confluence_base")
+    if not text or not confluence_base:
+        return []
+    # escape dots in hostname for regex
+    host_pattern = re.escape(confluence_base.replace("https://", "").replace("http://", ""))
+    results = []
+    for m in re.finditer(rf'https?://{host_pattern}/pages/viewpage\.action\?pageId=(\d+)', text):
+        results.append((m.group(0), m.group(1)))
+    for m in re.finditer(rf'https?://{host_pattern}/display/\S+', text):
+        results.append((m.group(0), None))
+    return results
+
+
+def confluence_host(config):
+    """Extract hostname from confluence_base URL."""
+    base = config.get("confluence_base", "")
+    return base.replace("https://", "").replace("http://", "").split("/")[0]
+
+
+def resolve_confluence_page_id(display_url, config):
+    """Resolve a /display/ URL to a page ID via Confluence REST API."""
+    match = re.search(r'/display/([^/]+)/(.+)', display_url)
+    if not match:
+        return None
+    space = match.group(1)
+    title = urllib.parse.unquote_plus(match.group(2).split('?')[0].split('#')[0])
+    base = config["confluence_base"]
+    url = f"{base}/rest/api/content?spaceKey={space}&title={urllib.parse.quote(title)}"
+    req = urllib.request.Request(url)
+    auth = get_auth(confluence_host(config), config)
+    if auth:
+        req.add_header("Authorization", auth)
+    try:
+        with urllib.request.urlopen(req) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            results = data.get("results", [])
+            if results:
+                return results[0]["id"]
+    except Exception:
+        pass
+    return None
+
+
+def fetch_confluence_page(page_id, config):
+    """Fetch a Confluence page by ID, return (title, html_body) or None."""
+    base = config["confluence_base"]
+    url = f"{base}/rest/api/content/{page_id}?expand=body.view"
+    req = urllib.request.Request(url)
+    auth = get_auth(confluence_host(config), config)
+    if auth:
+        req.add_header("Authorization", auth)
+    try:
+        with urllib.request.urlopen(req) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            title = data.get("title", "Untitled")
+            body = data.get("body", {}).get("view", {}).get("value", "")
+            return title, body
+    except Exception:
+        return None
+
+
+def html_to_text(html_content):
+    """Convert HTML to readable plain text."""
+    text = re.sub(r'<br\s*/?>', '\n', html_content)
+    text = re.sub(r'</(?:p|div|tr|li|h[1-6])>', '\n', text)
+    text = re.sub(r'<(?:p|div|tr|h[1-6])[^>]*>', '\n', text)
+    text = re.sub(r'</t[dh]>', '\t', text)
+    text = re.sub(r'<[^>]+>', '', text)
+    text = html_mod.unescape(text)
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    return text.strip()
+
+
+def format_confluence_pages(description, config):
+    """Fetch linked Confluence pages from description, return formatted text."""
+    urls = extract_confluence_urls(description, config)
+    if not urls:
+        return ""
+    base = config["confluence_base"]
+    sections = []
+    for url, page_id in urls:
+        if page_id is None:
+            page_id = resolve_confluence_page_id(url, config)
+        if page_id is None:
+            sections.append(f"\n## Linked Confluence Page\n**URL**: {url}\n\nFailed to resolve page ID.")
+            continue
+        result = fetch_confluence_page(page_id, config)
+        if result is None:
+            sections.append(f"\n## Linked Confluence Page\n**URL**: {url}\n\nFailed to fetch page content.")
+            continue
+        title, body = result
+        text = html_to_text(body)
+        page_url = f"{base}/pages/viewpage.action?pageId={page_id}"
+        sections.append(f"\n## Linked Confluence Page: {title}\n**URL**: {page_url}\n\n{text}")
+    return "\n".join(sections)
+
+
 def format_ticket(data, config):
     """Format ticket data as readable text."""
     f = data["fields"]
@@ -253,9 +360,15 @@ def format_ticket(data, config):
                 lines.append(f"- {link_type}: [{target['key']}] {safe(target, 'fields', 'summary')}")
 
     # description
+    description = f.get("description") or ""
     lines.append("")
     lines.append("## Description")
-    lines.append(f.get("description") or "No description.")
+    lines.append(description or "No description.")
+
+    # linked confluence pages
+    confluence = format_confluence_pages(description, config)
+    if confluence:
+        lines.append(confluence)
 
     # comments
     comments = f.get("comment", {}).get("comments", [])

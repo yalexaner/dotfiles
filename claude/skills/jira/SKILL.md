@@ -2,7 +2,7 @@
 name: jira
 description: Fetch and display Jira ticket details. Use when the user mentions a Jira ticket key (like PROJECT-123) or a Jira URL.
 argument-hint: [ticket-key or URL]
-compatibility: Requires python3, ~/.claude/jira-config.json with base URLs, and ~/.netrc with credentials.
+compatibility: Requires python3, ~/.claude/jira-config.json with base URLs, and ~/.netrc with credentials. Also fetches linked Confluence pages if configured.
 allowed-tools: Bash(python3 *)
 ---
 
@@ -23,6 +23,8 @@ Descriptions and comments use **Jira wiki markup** (not Markdown):
 - `h1.` through `h6.` for headings
 
 Interpret this markup naturally when presenting.
+
+If the description contains links to Confluence pages, the page content is automatically fetched and appended after the description. Present this content as part of the ticket context.
 
 ## Error handling
 

@@ -8,15 +8,17 @@
 
 ## Step 1: Create config file
 
-Create `~/.claude/jira-config.json` with your instance URL:
+Create `~/.claude/jira-config.json` with your instance URLs:
 
 ```json
 {
-  "jira_base": "https://your-jira-instance.example.com"
+  "jira_base": "https://your-jira-instance.example.com",
+  "confluence_base": "https://your-confluence-instance.example.com"
 }
 ```
 
 - `jira_base` (required): your Jira Server base URL
+- `confluence_base` (optional): your Confluence base URL — if ticket descriptions link to Confluence spec pages, they will be fetched automatically
 
 ## Step 2: Create ~/.netrc
 
@@ -35,6 +37,8 @@ Set permissions (required — some tools refuse to read it if permissions are to
 ```bash
 chmod 600 ~/.netrc
 ```
+
+If your Confluence instance shares the same user directory (common with Atlassian products), the Jira credentials will be reused automatically for Confluence. Otherwise, add a separate entry for the Confluence host.
 
 ## Step 3: Verify the connection
 
