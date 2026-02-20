@@ -1,8 +1,8 @@
 ---
 name: jira
-description: Fetch and display Jira ticket details. Use when the user mentions a Jira ticket key (like STB-1417) or a Jira URL (like https://ksu.nag.ru/browse/STB-1417).
+description: Fetch and display Jira ticket details. Use when the user mentions a Jira ticket key (like PROJECT-123) or a Jira URL.
 argument-hint: [ticket-key or URL]
-compatibility: Requires python3, curl, and ~/.netrc with basic auth credentials for ksu.nag.ru
+compatibility: Requires python3, ~/.claude/jira-config.json with base URLs, and ~/.netrc with credentials.
 allowed-tools: Bash(python3 *)
 ---
 
@@ -26,8 +26,10 @@ Interpret this markup naturally when presenting.
 
 ## Error handling
 
-If the ticket data above contains an error:
-- **403 Forbidden**: CAPTCHA is triggered. Tell the user to log into `https://ksu.nag.ru` in their browser, solve the CAPTCHA, then retry. Do NOT retry the request.
+If the ticket data above contains an error or setup instructions:
+- **SETUP REQUIRED**: The script prints full setup instructions. Present them to the user as-is — they contain all the steps needed to configure the skill.
+- **403 Forbidden / CAPTCHA**: Tell the user to log into their Jira instance in the browser, solve the CAPTCHA, then retry. Do NOT retry the request.
 - **404 Not Found**: The ticket key is invalid or doesn't exist.
-- **Auth not configured**: If the script fails because `~/.netrc` is missing or has no entry for `ksu.nag.ru`, refer the user to [references/SETUP.md](references/SETUP.md) for setup instructions.
+- **Auth errors (401)**: The script diagnoses the issue (missing ~/.netrc, missing host entry, wrong credentials) and prints specific guidance. Present it to the user.
+- **Connection errors**: The script reports the issue with the configured URL. Present it to the user.
 - **Invalid input**: Ask the user for a valid ticket key or URL.
