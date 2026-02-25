@@ -100,3 +100,11 @@ Provide a structured report with:
 
 5. **Set expectations on output** — "provide a structured report with..."
    prevents agents from returning a wall of unstructured text.
+
+6. **Architecture before solution.** Always include in the Analyst agent's
+   prompt: "Before recommending an implementation, study the architecture of
+   the module where the fix will live. Look at how existing features in that
+   module are implemented — how it communicates with other components, what
+   patterns and conventions it follows. Your recommendation must be consistent
+   with the established architecture. Prefer following existing patterns over
+   introducing simpler but inconsistent shortcuts."
