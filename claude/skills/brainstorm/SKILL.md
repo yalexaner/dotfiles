@@ -3,7 +3,7 @@ name: brainstorm
 description: Deep-dive analysis of a Jira ticket with parallel codebase exploration. Fetches ticket requirements, launches Claude subagents and Codex in parallel to analyze related code, cross-references findings, and presents a structured report. Use when starting work on a new ticket, investigating a problem, or planning an implementation.
 argument-hint: [jira-ticket-key-or-url] [optional focus area]
 disable-model-invocation: true
-allowed-tools: Skill(jira *), Task, Read, Grep, Glob, Bash(pwd), Bash(jj log *), Bash(jj diff *), Bash(jj show *), Bash(codex exec *), Bash(which *), Bash(jq *), AskUserQuestion, EnterPlanMode
+allowed-tools: Skill(jira *), Task, Read, Grep, Glob, Bash(pwd), Bash(jj log *), Bash(jj diff *), Bash(jj show *), Bash(codex exec *), Bash(which *), Bash(jq *), AskUserQuestion, EnterPlanMode, Edit
 metadata:
   compatibility: Codex CLI optional (npm i -g @openai/codex). Degrades gracefully to Claude-only if Codex is unavailable.
 ---
@@ -72,6 +72,22 @@ The codebase analysis reads files from the local working tree. If the checkout d
 3. If they match or the ticket doesn't mention a branch — proceed
 4. If they don't match or pre-flight returned empty — warn the user and ask whether to proceed or switch first. Do NOT switch automatically.
 
+### 0.4 Check for Decompose File
+
+Check the project's auto memory directory for a `{TICKET}-decompose.md` file (where `{TICKET}` is the ticket key extracted in 0.1).
+
+**No file found** → proceed with normal brainstorm (Phases 1-4 unchanged).
+
+**File found** → enter **decompose-guided mode**:
+1. Read the entire decompose file.
+2. Find the first step with `- [ ] analyzed`.
+3. If all steps are `- [x] analyzed`: report "all steps have been analyzed" and offer the user to re-run a specific step or exit. Do not proceed to Phase 1.
+4. Read the `brainstorm-context` HTML comment block for the current step — this becomes the **focus area**.
+5. Read all `brainstorm-result` blocks from completed steps — this provides **cross-step context**.
+6. If the user also provided a focus area argument (`$ARGUMENTS[1..]`), use that instead of the decompose file's next step, but still read cross-step context.
+
+Present to the user: "Decompose file found. Analyzing step N: {step name}." Then proceed to Phase 1 with the step-scoped context.
+
 ---
 
 ## Phase 1: Parallel Codebase Analysis
@@ -87,6 +103,11 @@ Based on the extracted ticket information, craft **detailed, specific prompts** 
 - Instruction to be thorough and list exact file paths and line numbers
 
 See [references/agent-prompts.md](references/agent-prompts.md) for prompt templates.
+
+**Decompose-guided mode**: When operating in decompose-guided mode (Phase 0.4), additionally:
+- Scope agent prompts to the current step's `brainstorm-context` (not the entire ticket)
+- Include cross-step results from completed steps in agent prompts: "Previous steps established these patterns: [results]. Follow them for consistency."
+- The step's `known-code`, `pattern`, and `cli-commands` fields should be incorporated into agent prompts as specific search targets
 
 ### 1.2 Launch All Agents
 
@@ -242,12 +263,34 @@ If Codex contributed verified new findings, include a note:
 
 ## Phase 4: Next Steps
 
+### Normal mode
+
 After presenting the report, ask the user what they want to do next:
 
 ```
 Use AskUserQuestion with options:
 - "Enter plan mode" → Use EnterPlanMode to design an implementation plan
 - "Discuss findings" → Continue the conversation to explore findings deeper
+- "Done for now" → End the brainstorm session
+```
+
+### Decompose-guided mode
+
+After presenting the report, update the decompose file and offer to continue:
+
+1. **Append brainstorm-result**: Use the Edit tool to add a compact `<!-- brainstorm-result -->` block under the current step's `brainstorm-context` block. The result should be 5-10 lines capturing:
+   - Key decisions and patterns established
+   - Files created or identified for modification
+   - Functions/structures introduced
+   - Anything the next steps should know for consistency
+
+2. **Mark step complete**: Use the Edit tool to change `- [ ] analyzed` to `- [x] analyzed` for the current step.
+
+3. **Ask the user**:
+```
+Use AskUserQuestion with options:
+- "Next step" → Read the decompose file again, find the next pending step, start a new Phase 1
+- "Enter plan mode" → Use EnterPlanMode to plan implementation of this step
 - "Done for now" → End the brainstorm session
 ```
 
