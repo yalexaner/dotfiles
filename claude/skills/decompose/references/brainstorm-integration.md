@@ -35,7 +35,7 @@ h. **After presenting the report**:
    - Change `- [ ] analyzed` to `- [x] analyzed`
    - Use the Edit tool to modify the decompose file
 
-i. **Ask the user**: "Continue to next step or stop?"
+i. **Report completion**: Tell the user which step was completed and what the next pending step is (if any). End with: "Run `/brainstorm {TICKET}` in a new session for the next step." Do NOT use AskUserQuestion to offer continuation — each step should run in a fresh context window for optimal analysis depth.
 
 ### 4. Focus Area Override
 
