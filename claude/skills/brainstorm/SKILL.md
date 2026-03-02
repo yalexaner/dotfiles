@@ -286,13 +286,7 @@ After presenting the report, update the decompose file and offer to continue:
 
 2. **Mark step complete**: Use the Edit tool to change `- [ ] analyzed` to `- [x] analyzed` for the current step.
 
-3. **Ask the user**:
-```
-Use AskUserQuestion with options:
-- "Next step" → Read the decompose file again, find the next pending step, start a new Phase 1
-- "Enter plan mode" → Use EnterPlanMode to plan implementation of this step
-- "Done for now" → End the brainstorm session
-```
+3. **Report completion**: Tell the user which step was completed and what the next pending step is (if any). End with: "Run `/brainstorm {TICKET}` in a new session for the next step." Do NOT use AskUserQuestion to offer continuation — each step should run in a fresh context window for optimal analysis depth.
 
 ---
 
