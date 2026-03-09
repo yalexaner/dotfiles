@@ -62,7 +62,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "[ \"$(osascript -e 'tell application \"System Events\" to get name of first process whose frontmost is true' 2>/dev/null)\" = 'wezterm-gui' ] || /opt/homebrew/bin/terminal-notifier -title 'Claude Code' -message 'Permission needed' -sound Glass -group claude",
+            "command": "if [ \"$(osascript -e 'tell application \"System Events\" to get name of first process whose frontmost is true' 2>/dev/null)\" != 'wezterm-gui' ]; then if [ -x /opt/homebrew/bin/terminal-notifier ]; then /opt/homebrew/bin/terminal-notifier -title 'Claude Code' -message 'Permission needed' -sound Glass -group claude; elif command -v notify-send >/dev/null 2>&1; then notify-send 'Claude Code' 'Permission needed'; fi; fi",
             "timeout": 5
           }
         ]
@@ -72,7 +72,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "[ \"$(osascript -e 'tell application \"System Events\" to get name of first process whose frontmost is true' 2>/dev/null)\" = 'wezterm-gui' ] || /opt/homebrew/bin/terminal-notifier -title 'Claude Code' -message 'Input needed' -sound Glass -group claude",
+            "command": "if [ \"$(osascript -e 'tell application \"System Events\" to get name of first process whose frontmost is true' 2>/dev/null)\" != 'wezterm-gui' ]; then if [ -x /opt/homebrew/bin/terminal-notifier ]; then /opt/homebrew/bin/terminal-notifier -title 'Claude Code' -message 'Input needed' -sound Glass -group claude; elif command -v notify-send >/dev/null 2>&1; then notify-send 'Claude Code' 'Input needed'; fi; fi",
             "timeout": 5
           }
         ]
@@ -83,7 +83,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "[ \"$(osascript -e 'tell application \"System Events\" to get name of first process whose frontmost is true' 2>/dev/null)\" = 'wezterm-gui' ] || /opt/homebrew/bin/terminal-notifier -title 'Claude Code' -message 'Finished' -sound Purr -group claude",
+            "command": "if [ \"$(osascript -e 'tell application \"System Events\" to get name of first process whose frontmost is true' 2>/dev/null)\" != 'wezterm-gui' ]; then if [ -x /opt/homebrew/bin/terminal-notifier ]; then /opt/homebrew/bin/terminal-notifier -title 'Claude Code' -message 'Finished' -sound Purr -group claude; elif command -v notify-send >/dev/null 2>&1; then notify-send 'Claude Code' 'Finished'; fi; fi",
             "timeout": 5
           }
         ]
