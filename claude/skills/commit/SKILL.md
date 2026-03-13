@@ -2,12 +2,12 @@
 name: commit
 description: Analyze git changes and create conventional commit messages with jujutsu. Use when committing code, creating commit messages, or when user says "commit".
 argument-hint: [optional context or focus]
-allowed-tools: Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(git branch:*), Bash(jj desc:*)
+allowed-tools: Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(git branch:*), Bash(jj commit:*)
 ---
 
 # Commit with Jujutsu (Conventional Commits, Lowercase)
 
-Analyze changes using git, generate a conventional commit message, and commit with `jj desc`.
+Analyze changes using git, generate a conventional commit message, and commit with `jj commit`.
 
 ## Context
 
@@ -60,7 +60,7 @@ feat(api): add user authentication endpoint
 ### 4. Execute
 
 **DO:**
-- Execute `jj desc -m "<message>"` immediately
+- Execute `jj commit -m "<message>"` immediately
 
 **DO NOT:**
 - Never use `git commit`, `git add`, or `git push`
