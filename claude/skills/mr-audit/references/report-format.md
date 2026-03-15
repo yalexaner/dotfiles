@@ -74,7 +74,7 @@ False positives filtered out during cross-validation. Listed for transparency.
 {Merged view from all sources — do they agree the approach is sound?}
 
 ### Alternatives Mentioned
-| Approach | Pros | Cons | Source |
+| Approach | Pros | Cons | Origin |
 |----------|------|------|--------|
 | MR's approach | ... | ... | All |
 | Alternative A | ... | ... | {who suggested it} |
@@ -143,4 +143,4 @@ Place `[uncertain]` findings at the bottom of the severity group they belong to.
 
 ### Architecture & Testing
 
-Merge all source assessments into unified text. Do not include per-source columns — the findings section already covers specific issues. These sections provide the big picture: is the approach sound, and is the testing adequate.
+Merge all source assessments into unified text. Do not include per-model columns — the findings section already covers specific issues. These sections provide the big picture: is the approach sound, and is the testing adequate.

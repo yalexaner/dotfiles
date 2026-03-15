@@ -13,7 +13,7 @@ allowed-tools: Bash(codex exec *), Bash(which *), Bash(glab mr view *), Bash(gla
 
 Run three independent reviews in parallel — Claude Code (`/mr-review`), Codex skill-based (`$mr-review`), and Codex built-in code review — then cross-validate findings against the codebase and compile a single confidence-tiered report.
 
-> **Critical rule**: Every Bash command must be a standalone call. NEVER combine commands with `||`, `&&`, `|`, or `;`. Handle errors and fallbacks in skill logic — run one command, check its output, then decide what to do next. Compound commands break the permission system and will trigger approval prompts.
+> **Critical rule**: Every Bash tool call must be a standalone command. NEVER combine commands with `||`, `&&`, `|`, or `;`. Handle errors and fallbacks in skill logic — run one command, check its output, then decide what to do next. Compound commands break the permission system and will trigger approval prompts. This rule applies to Bash tool calls only — `!`command`` pre-flight blocks are preprocessing and may use shell operators freely.
 
 > **Language rule**: The entire report must be written in English. All findings, explanations, suggestions, architecture assessments, and questions must be in English. The only exception is direct quotes from source materials (reviewer comments, MR descriptions, Jira tickets) — these may remain in their original language when explicitly quoted.
 
@@ -125,7 +125,7 @@ codex exec review --base {TARGET_BRANCH} --full-auto --json > "/tmp/codex-builti
 jq -rs '[.[] | select(.type=="item.completed" and .item.type=="agent_message") | .item.text] | last // ""' "/tmp/codex-builtin-raw-{PROJECT}-{MR_NUMBER}.jsonl"
 ```
 
-The review text is returned as Bash output — do NOT redirect to a file with `>` (redirects are shell operators that break permission auto-approval). Hold the output for use in Phase 3.
+The review text is returned as Bash output — do NOT redirect Step 2 output to a file with `>`. Hold it for use in Phase 3. (Step 1 intentionally uses `>` for background capture — this will trigger a one-time permission prompt.)
 
 **Note**: These are two separate Bash calls, not a pipe. See the global rule about standalone commands. See [references/codex-review-bug.md](references/codex-review-bug.md) for why `--json` + `jq` is needed instead of `-o`.
 

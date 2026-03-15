@@ -41,7 +41,7 @@ Check if installed:
 ls ~/.codex/skills/jira/SKILL.md ~/.codex/skills/mr-review/SKILL.md
 ```
 
-If missing, copy from the dotfiles repo:
+If missing, copy from the dotfiles repo (adjust path to your dotfiles location):
 ```bash
 cp -r ~/Projects/dotfiles/claude/skills/jira ~/.codex/skills/
 cp -r ~/Projects/dotfiles/claude/skills/mr-review ~/.codex/skills/

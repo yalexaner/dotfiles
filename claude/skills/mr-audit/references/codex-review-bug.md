@@ -38,4 +38,4 @@ Then manually extract what you need from the file.
 
 ## Recommendation
 
-The `--json` + `jq` approach from Option 1 is by far the cleanest path until OpenAI fixes the bug. This is what the `mr-audit` skill uses in Phase 1B.
+The `--json` + `jq` approach is the cleanest path until OpenAI fixes the bug. The `mr-audit` skill uses a two-step variant of Option 1 in Phase 1B: Step 1 captures the JSONL stream to a temp file (for background execution), then Step 2 extracts the review text with `jq` after the background task completes.
