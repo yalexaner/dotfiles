@@ -2,7 +2,7 @@
 name: mr-review
 description: Comprehensive GitLab merge request review with architecture analysis, alternative approaches comparison, and code quality checks. Use when reviewing MRs, analyzing code changes, or when user mentions "review", "MR", "merge request", or "code review".
 argument-hint: [mr-number or branch-name] [jira-ticket-url]
-allowed-tools: Bash(glab mr view *), Bash(glab mr diff *), Bash(glab mr list *), Bash(glab mr issues *), Bash(git branch *), Bash(git log *), Bash(git diff *), Bash(git status *), Bash(git show *), Skill(jira *), Read, Grep, Glob, WebFetch
+allowed-tools: Bash(glab mr view *), Bash(glab mr diff *), Bash(glab mr list *), Bash(glab mr issues *), Bash(git branch *), Bash(git log *), Bash(git diff *), Bash(git status *), Bash(git show *), Skill(jira *), Read, Grep, Glob
 ---
 
 # GitLab Merge Request Review
@@ -23,7 +23,7 @@ Perform a comprehensive code review of a GitLab merge request with deep analysis
 ## Arguments
 
 - **MR Identifier**: $ARGUMENTS[0] (MR number, branch name, or empty for current branch)
-- **Jira Ticket**: $ARGUMENTS[1] (optional Jira ticket key like STB-1417 or URL like https://ksu.nag.ru/browse/STB-1417)
+- **Jira Ticket**: $ARGUMENTS[1] (optional Jira ticket key like STB-1417 or full URL)
 
 ## Review Process
 
@@ -49,7 +49,7 @@ Before starting the review, check if required context is available:
 **1.1 Fetch MR Data**
 ```bash
 # Get full MR details
-glab mr view $0 --output json
+glab mr view $0 -F json
 
 # Get complete diff
 glab mr diff $0 --color=never --raw
@@ -65,7 +65,7 @@ Once you have a Jira ticket key or URL (from arguments, MR description, or user 
 ```
 Extract from the ticket: problem statement, acceptance criteria, requirements, and any relevant comments.
 
-If no Jira ticket is available, rely on the MR description for problem understanding.
+If the `/jira` skill is not available or no Jira ticket is found, rely on the MR description for problem understanding.
 
 **1.3 Analyze Local Changes**
 - Read all changed files completely
