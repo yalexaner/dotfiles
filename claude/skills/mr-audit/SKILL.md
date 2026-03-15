@@ -7,8 +7,6 @@ description: >-
 argument-hint: [mr-number] [jira-ticket]
 disable-model-invocation: true
 allowed-tools: Bash(codex exec *), Bash(which *), Bash(glab mr view *), Bash(glab mr diff *), Bash(glab mr list *), Bash(git log *), Bash(git diff *), Bash(jj log *), Bash(jj show *), Bash(jq *), Read, Grep, Glob, Skill(mr-review *), Skill(jira *)
-metadata:
-  compatibility: Requires codex CLI (npm i -g @openai/codex), glab CLI, and Codex skills (jira, mr-review) in ~/.codex/skills/. See references/SETUP.md. Degrades gracefully to Claude-only if Codex is unavailable.
 ---
 
 # Triple-Model MR Review
@@ -179,24 +177,7 @@ This is the core value. Three independent models give three perspectives — ove
 
 ### 3.1 Classify Findings
 
-For each finding, assign two things:
-
-**Consensus tag** — how many sources flagged it:
-
-| Tag | Meaning |
-|-----|---------|
-| `[all]` | All available sources agree |
-| `[2/3]` | Two of three sources agree |
-| `[confirmed]` | Single source, verified by code investigation |
-| `[uncertain]` | Single source, could not confirm or dismiss |
-
-**Severity** — how bad it is:
-
-| Severity | Use for |
-|----------|---------|
-| **Must Fix** | Bugs, missing safety nets, production breakage |
-| **Should Fix** | Code quality, duplication, maintainability |
-| **Nit** | Style, naming, minor inconsistencies |
+For each finding, assign a **consensus tag** and a **severity** per the definitions in [references/report-format.md](references/report-format.md) (see "Consensus tags" and "Severity groups" tables).
 
 Match findings by: same file + same function/area + same type of issue. Similar issues in the same area count as agreement even if wording differs.
 
