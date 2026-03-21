@@ -96,31 +96,6 @@ local passthrough_keys = {
 -- --- Configuration & Utilities ---
 local config_keys = {
   { key = "r", mods = "ALT", action = act.ReloadConfiguration },
-  {
-    key = ",",
-    mods = "CTRL",
-    action = wezterm.action.SpawnCommandInNewTab({
-      cwd = os.getenv("WEZTERM_CONFIG_DIR"),
-      set_environment_variables = {
-        TERM = "screen-256color",
-      },
-      -- Prefer neovide; fallback to nvim or vim if unavailable
-      args = (function()
-        if wezterm.target_triple:find("windows") then
-          local ps = [[
-$cfg = $env:WEZTERM_CONFIG_FILE
-if (Get-Command neovide -ErrorAction SilentlyContinue) { neovide $cfg }
-elseif (Get-Command nvim -ErrorAction SilentlyContinue) { nvim $cfg }
-elseif (Get-Command vim -ErrorAction SilentlyContinue) { vim $cfg }
-else { Write-Host 'No editor (neovide/nvim/vim) found in PATH'; Start-Sleep -Seconds 3 }
-]]
-          return { "powershell.exe", "-NoLogo", "-NoProfile", "-Command", ps }
-        else
-          return { "/bin/sh", "-lc", "neovide \"$WEZTERM_CONFIG_FILE\" || nvim \"$WEZTERM_CONFIG_FILE\" || vim \"$WEZTERM_CONFIG_FILE\"" }
-        end
-      end)(),
-    }),
-  },
 }
 
 -- combine all keybindings
