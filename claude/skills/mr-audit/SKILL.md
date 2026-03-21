@@ -104,7 +104,7 @@ Run with `run_in_background=true`. This uses the `$mr-review` Codex skill which 
 ```bash
 codex exec -s danger-full-access -C "$PWD" \
   -o "/tmp/codex-mr-review-{PROJECT}-{MR_NUMBER}.md" \
-  '$mr-review {MR_NUMBER}'
+  '$mr-review {MR_NUMBER}' > /dev/null 2>&1
 ```
 
 **Important**: Do NOT use `--full-auto` — it overrides sandbox to workspace-write, blocking network access needed for `glab` and Jira.
