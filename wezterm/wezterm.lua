@@ -111,42 +111,24 @@ config.keys = {
 	{ key = "f", mods = "CTRL", action = act.SendKey({ key = "f", mods = "CTRL" }) },
 	{ key = "r", mods = "CTRL", action = act.SendKey({ key = "r", mods = "CTRL" }) },
 
+	-- rename tab
+	{ key = "n", mods = "ALT", action = act.PromptInputLine({
+		description = "tab name:",
+		action = wezterm.action_callback(function(window, pane, line)
+			if line then window:active_tab():set_title(line) end
+		end),
+	})},
+
 	-- config reload
 	{ key = "r", mods = "ALT", action = act.ReloadConfiguration },
 }
 
--- tab/window title: show current working directory
-local function get_current_working_dir(tab)
-	local current_dir_uri = tab.active_pane and tab.active_pane.current_working_dir or ""
-	local function normalize_path(p)
-		if not p then return "" end
-		p = p:gsub("\\", "/")
-		return string.lower(p)
-	end
-	local current_dir_path = normalize_path(current_dir_uri:gsub("file://", ""))
-	local home_dir_path = normalize_path(
-		(is_windows and os.getenv("USERPROFILE")) or os.getenv("HOME") or wezterm.home_dir
-	)
-	if current_dir_path == home_dir_path then
-		return "."
-	end
-	return string.gsub(current_dir_path, "(.*[/\\])(.*)", "%2")
-end
-
+-- tab title: show index and custom name if set
 wezterm.on("format-tab-title", function(tab)
 	local index = tonumber(tab.tab_index) + 1
-	local custom_title = tab.tab_title
-	local title = get_current_working_dir(tab)
-
-	if custom_title and #custom_title > 0 then
-		title = custom_title
-	end
-
+	local title = tab.tab_title
+	if not title or #title == 0 then return end
 	return string.format("  %s•%s  ", index, title)
-end)
-
-wezterm.on("format-window-title", function(tab)
-	return get_current_working_dir(tab)
 end)
 
 return config
