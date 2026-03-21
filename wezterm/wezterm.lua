@@ -4,7 +4,7 @@ local act = wezterm.action
 
 -- Set default shell only on Windows; otherwise let WezTerm decide
 if wezterm.target_triple:find("windows") then
-  config.default_prog = { "C:\\Program Files\\PowerShell\\7\\pwsh.exe", "-NoLogo" }
+  config.default_prog = { "wsl.exe", "-d", "Ubuntu" }
 end
 
 config.launch_menu = wezterm.target_triple:find("windows") and {
@@ -172,7 +172,7 @@ local ui_config = {
 	tab = {
 		max_width = 60,
 		use_fancy_tab_bar = false,
-		show_new_tab_button = false,
+		show_new_tab_button = wezterm.target_triple:find("windows") and true or false,
 		switch_to_last_active_when_closing = true,
 	},
 
