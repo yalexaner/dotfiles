@@ -9,8 +9,8 @@ mkdir -p "$config_dir"
 cp "$script_dir/wezterm.lua" "$config_dir/wezterm.lua"
 echo "installed wezterm.lua to $config_dir"
 
-# remove legacy symlink if it exists
-if [ -L "${HOME}/.wezterm.lua" ]; then
-  rm "${HOME}/.wezterm.lua"
-  echo "removed legacy symlink ~/.wezterm.lua"
+# back up legacy config if it exists
+if [ -e "${HOME}/.wezterm.lua" ] || [ -L "${HOME}/.wezterm.lua" ]; then
+  mv "${HOME}/.wezterm.lua" "${HOME}/.wezterm.lua.bak"
+  echo "backed up ~/.wezterm.lua to ~/.wezterm.lua.bak"
 fi
