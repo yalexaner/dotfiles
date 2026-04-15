@@ -1,57 +1,39 @@
 # MR Format Examples
 
-## Simple change (1-line fix)
+## Simple change
 
-**Title:** `SWITCH-4350: Некорректное время в выводе команды show ip dhcp snooping blocked`
-
-**Description:**
+**Title:** `SWITCH-4350: Исправить отображение времени в show ip dhcp snooping blocked`
 
 ```markdown
 ## Описание
 
-Исправлено отображение времени в выводе команд `show ip dhcp snooping blocked` и `show am blocked`. Вместо времени по GMT теперь используется локальное время устройства. В функции `nsm_blocked_record_show()` заменён вызов `pal_time_gmt()` на `pal_time_loc()`.
+В выводе команд `show ip dhcp snooping blocked` и `show am blocked` отображалось время по GMT вместо локального. В `nsm_blocked_record_show()` заменён вызов `pal_time_gmt()` на `pal_time_loc()`.
 
-## Связанная задача
+## Заметки для ревью
 
-- **SWITCH-4350:** Некорректное время в выводе команды show ip dhcp snooping blocked
+- Изменение затрагивает только формат вывода, логика блокировки не меняется
 ```
 
 ---
 
-## Complex change (new functionality, multiple files)
+## Multi-commit change with review order
 
-**Title:** `SWITCH-4296: Запретить применение команды speed-duplex force10g-full high-leq`
-
-**Description:**
+**Title:** `CPE-3417: Поднять минимальную версию до 10 (API 29+)`
 
 ```markdown
 ## Описание
 
-Добавлена проверка модели устройства перед применением параметра `high-leq` в команде `speed-duplex`. На неподдерживаемых моделях команда теперь отклоняется с соответствующим сообщением об ошибке. Проверка реализована для всех путей управления: CLI, SNMP и config write.
+Приложение больше не поддерживает Android 9 и ниже. `minSdkVersion` поднята с 21 до 29. Удалены устаревшие проверки `SDK_INT`, мёртвые разрешения (`CHANGE_WIFI_STATE`, `WRITE_EXTERNAL_STORAGE`), флаг `requestLegacyExternalStorage` и lint-аннотации `tools:targetApi` для API ≤ 28. Код недоступного legacy-дерева (`ConfigurationFragment`, `PathCompat` и т.д.) намеренно не тронут.
 
-## Связанная задача
+## Заметки для ревью
 
-- **SWITCH-4296:** Запретить применение команды speed-duplex force10g-full high-leq
+- `checkLocPermissions` в `MainActivity` упрощён с `when` на `if/else` — проверить поведение permission flow на API 29–30 (fine only) и 31+ (fine + coarse)
+- `MyPermission.isNewPermissionModel` удалён (всегда true) — затрагивает `hasPermission`, `hasPermissions`, `reRequestPermissions`
+- Разрешения `CHANGE_WIFI_STATE` и `WRITE_EXTERNAL_STORAGE` удалены из манифеста — живые пути их не используют, но мёртвый код в `ConfigurationFragment` и `ApplyFragment` ссылается на них. Это ожидаемо, т.к. legacy-дерево недоступно в текущем app flow
 
-## Что исправлено
+## Порядок ревью
 
-### Проверка поддержки high-leq по модели устройства
-
-- Добавлена функция `nsm_is_high_leq_supported()`, которая определяет поддержку high-leq на основании идентификатора устройства (`/sys/rtk_hw_info/deviceid`)
-- Поддержка ограничена моделями серии SNR-S5210 (включая варианты UPS, DC, RPS, 2AC, POE, R)
-
-### CLI
-
-- При попытке выполнить `speed-duplex force10g-full high-leq` на неподдерживаемой модели пользователь получает сообщение: `high-leq is not supported on this device model`
-- Команда возвращает `CLI_ERROR`, предотвращая применение некорректной конфигурации
-
-### SNMP
-
-- В SNMP write-обработчике (`nsm_pri_port_table_snmp.c`) добавлена аналогичная проверка
-- При попытке установить high-leq через SNMP на неподдерживаемой модели возвращается `SNMP_ERR_WRONGVALUE`
-
-### Config write (show running-config)
-
-- Параметр `high-leq` записывается в running-config только на устройствах, которые его поддерживают
-- Предотвращает появление неподдерживаемых команд в конфигурации при переносе между моделями
+1. Первый коммит: `app/build.gradle` + `AndroidManifest.xml` — база
+2. Второй коммит: Kotlin-файлы — runtime-упрощения, это основная часть
+3. Третий коммит: XML-ресурсы — механическое удаление `tools:targetApi`, можно бегло
 ```

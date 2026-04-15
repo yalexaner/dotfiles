@@ -28,9 +28,7 @@ If `$ARGUMENTS` is provided (an MR number), run `glab mr view $ARGUMENTS` to loa
 
 ## 3. Gather ticket info
 
-Ask the user for:
-- **Ticket ID** (e.g. SWITCH-4350)
-- **Ticket title** (in Russian, as-is from the tracker)
+Ask the user for a **Jira ticket** (ID or URL). Fetch the ticket using the `/jira` skill to get the title, description, and any relevant context.
 
 ## 4. Investigate the codebase
 
@@ -43,21 +41,41 @@ Before drafting, check if the changes have a broader impact:
 
 ### Title format
 ```
-<TICKET-ID>: <ticket title in Russian as-is>
+<TICKET-ID>: <adapted title>
 ```
 
-### Body format depends on complexity
+Keep the Jira ticket intent but adapt for developer audience. Remove tags like `[Easy-Config]`. Don't copy verbatim — synthesize from ticket title, description, and diff context to tell the reviewer what to expect.
 
-**Simple change** (1-3 lines changed, single clear fix) — two sections: `## Описание` and `## Связанная задача`.
+### Body structure
 
-**Complex change** (new functionality, multiple files) — add `## Что исправлено` with subsections.
+Two required sections, one optional:
+
+#### `## Описание`
+The *why* and *what* in 2-3 sentences. Not a diff summary, but the story: what problem exists, what decision was made, what this MR does about it.
+
+#### `## Заметки для ревью`
+Non-obvious decisions, things intentionally NOT done, risk areas, edge cases. The most valuable section — saves the reviewer from discovering what matters on their own.
+
+#### `## Порядок ревью` (optional)
+Suggested reading order — commit order or file reading order.
+
+**Include when:**
+- Multiple commits that build on each other
+- A foundation change that many files depend on
+- Changes span 3+ architectural layers
+
+**Skip when:**
+- Single commit, single or tightly coupled files
+- All changes are parallel/independent
+- Diff is small enough to scan linearly (~100 lines, 3-4 files)
 
 See [references/mr-formats.md](references/mr-formats.md) for examples.
 
 ### Wording rules
 - Write in Russian.
 - Straightforward and technical. No filler, no overly formal phrasing.
-- Consistent sentence structure across MRs.
+- No file-by-file changelog — the reviewer reads the diff.
+- No "Связанная задача" section — ticket ID is already in the title.
 - Function names and CLI commands in backticks.
 
 ## 6. Show draft for review
@@ -71,10 +89,14 @@ Only after user approval:
 ```
 glab mr create \
   --source-branch "<current-branch>" \
-  --target-branch "develop" \
+  --target-branch "<target-branch>" \
+  --assignee "a.lyachmenev" \
+  --remove-source-branch \
   --title "<title>" \
   --description "<description>"
 ```
+
+Default target branch is `develop` unless the user specifies otherwise.
 
 Return the MR URL when done.
 
