@@ -1,25 +1,22 @@
 ---
 name: ralphex-implement
 description: >-
-  Run ralphex on a plan, wait for completion, then verify the output.
-  Examines rev history, runs tests, and produces a report.
-  Use /ralphex-finalize after to clean up revs for PR.
+  Launch ralphex task execution on a plan using Kimi (OpenCode) in the background.
+  Reports status and log path when complete. Use /ralphex-review after to run
+  the review pipeline against a base branch.
 argument-hint: [plan-path]
 disable-model-invocation: true
-allowed-tools: Bash(ralphex *), Bash(jj *), Bash(which *), Bash(pwd), Bash(ls *), Bash(tail *), Bash(cat /tmp/*), Bash(wc *), Bash(go test *), Bash(go vet *), Bash(/usr/local/go/bin/go *), Bash(cargo test *), Bash(npm test *), Bash(npx *), Bash(./gradlew *), Bash(make test*), Skill(commit *)
+allowed-tools: Bash(ralphex *), Bash(jj *), Bash(which *), Bash(pwd), Bash(ls *), Bash(tail *), Bash(cat /tmp/*), Bash(fish -c *)
 ---
 
 # Ralphex Implement
 
-Run ralphex to implement a plan, verify the output, and report results.
-After this skill completes, run `/ralphex-finalize` to clean up revs for PR.
+Launch ralphex task execution on a plan using Kimi (OpenCode), wait for completion,
+and report results. After this skill completes, run `/ralphex-review <base-branch>`
+to run the review pipeline.
 
 > **Critical rule**: Every Bash tool call must be a standalone command. NEVER combine
 > commands with `||`, `&&`, `|`, or `;`. Handle errors and fallbacks in skill logic.
-
-> **Important**: The ralphex CLI command is `ralphex {PLAN_PATH}` (positional argument).
-> Do NOT use `ralphex --plan {PLAN_PATH}` — that flag is for interactive plan *creation*,
-> not implementation.
 
 > **jj workspace limitation**: ralphex requires a `.git` directory and cannot run in
 > jj workspaces (they only have `.jj`). Always run from the main/colocated repo directory.
@@ -61,73 +58,41 @@ If the current rev (`@`) has uncommitted changes:
 
 ---
 
-## Phase 1: Run Ralphex
+## Phase 1: Launch Tasks
 
-### 1.1 Launch ralphex in background
-
-Run with `run_in_background=true`, redirecting output to a log file:
+Launch `ralphex-tasks-opencode` in the background with a timestamped log:
 
 ```bash
-ralphex {PLAN_PATH} > /tmp/ralphex-implement-{TIMESTAMP}.log 2>&1
+log_file="/tmp/ralphex-implement-$(date +%s).log"
+fish -c "ralphex-tasks-opencode $plan_path" > "$log_file" 2>&1 &
 ```
 
-Where `{TIMESTAMP}` is the current unix timestamp for uniqueness.
+Store the log file path and PID for reference.
 
-**IMPORTANT**: The command is `ralphex {PLAN_PATH}` — the plan file is a POSITIONAL
-argument. Do NOT use `--plan` flag (that creates plans, not implements them).
+Ralphex takes 30min–2hrs. The background task will notify when done — do NOT poll or sleep.
+If the user asks for status, read the log file tail:
 
-Store the log file path for later.
+```bash
+tail -n 50 "$log_file"
+```
 
-### 1.2 Wait for completion
-
-The background task will notify when done — do NOT poll or sleep.
-Ralphex can take 30min to 2hrs. If the user asks for status, read the log file tail.
-
-After 2hrs without completion: stop the task, report partial progress.
-
-### 1.3 Analyze ralphex output
-
-Read the log file tail and check:
-- Whether ralphex completed successfully or failed
-- Any errors or warnings
-
-If ralphex failed — report the error to the user and stop.
+After 2hrs without completion: report partial progress and stop.
 
 ---
 
-## Phase 2: Verify Implementation
+## Phase 2: Check Status
 
-### 2.1 Examine rev history
+After the background task completes, check the log tail:
 
 ```bash
-jj log --limit 30
+tail -n 100 "$log_file"
 ```
 
-For each rev created by ralphex, check:
-```bash
-jj diff -r {REV_ID} --stat
-```
+Determine:
+- Whether ralphex completed successfully or failed
+- Any errors or warnings in the log
 
-### 2.2 Run tests
-
-Detect the project's test command by checking for:
-- `go.mod` → `go test ./...` (try `go` first, fall back to `/usr/local/go/bin/go`)
-- `Cargo.toml` → `cargo test`
-- `package.json` → `npm test` or the `test` script
-- `build.gradle.kts` / `build.gradle` → `./gradlew test`
-- `Makefile` with `test` target → `make test`
-- Otherwise — ask user for the test command
-
-Run the detected test command. If tests fail — report to user and stop.
-
-### 2.3 Read all source files
-
-Launch a subagent (`subagent_type: Explore`) to read all implementation files and verify:
-- Code quality and correctness
-- Whether implementation matches the plan
-- Any obvious issues
-
-Report findings (do NOT fix issues).
+If ralphex failed — report the error to the user and stop. Do NOT proceed to review.
 
 ---
 
@@ -141,20 +106,10 @@ Output a structured report:
 ### Summary
 - Plan: {plan_path}
 - Status: {success/failed}
-- Revs created: {count}
-- Tests: {pass/fail}
-- Log: {log_file_path}
-
-### Rev History (ralphex output)
-{rev_id} — {description}
-  └─ {files changed summary}
-...
-
-### Code Review
-{findings from explore subagent, or "No issues found"}
+- Log: {log_file}
 
 ### Next Step
-Run `/ralphex-finalize` to restructure revs, remove artifacts, and prepare for PR.
+Run `/ralphex-review <base-branch> {plan_path}` to run the review pipeline.
 ```
 
 ---
@@ -166,8 +121,7 @@ Run `/ralphex-finalize` to restructure revs, remove artifacts, and prepare for P
 | Ralphex not installed | Abort with install instructions |
 | No plan found | Abort: "Run /ralphex-plan first" |
 | Ralphex failed | Report error from logs, stop |
-| Tests fail after implementation | Report failures, stop |
-| 2hr ralphex timeout | Stop ralphex, report partial progress |
+| 2hr ralphex timeout | Report partial progress, stop |
 
 ---
 

@@ -1,18 +1,18 @@
 ---
 name: ralphex-finalize
 description: >-
-  Clean up revision history after ralphex implementation. Restructures revs
-  (split/squash), removes plan artifacts, updates docs, runs code review,
-  and produces a final report ready for PR. Use after /ralphex-implement.
+  Clean up revision history after /ralphex-implement and /ralphex-review.
+  Restructures revs (split/squash), removes plan artifacts, updates docs,
+  and produces a final report ready for PR.
 argument-hint: [base-rev]
 disable-model-invocation: true
-allowed-tools: Bash(jj *), Bash(git diff *), Bash(git status *), Bash(git log *), Bash(codex *), Bash(which *), Bash(jq *), Bash(go test *), Bash(go vet *), Bash(/usr/local/go/bin/go *), Bash(cargo test *), Bash(npm test *), Bash(npx *), Bash(./gradlew *), Bash(make test*), Bash(ls *), Bash(cat /tmp/*), Bash(pwd), Edit, Write, Skill(commit *)
+allowed-tools: Bash(jj *), Bash(git diff *), Bash(git status *), Bash(git log *), Bash(which *), Bash(jq *), Bash(go test *), Bash(go vet *), Bash(/usr/local/go/bin/go *), Bash(cargo test *), Bash(npm test *), Bash(npx *), Bash(./gradlew *), Bash(make test*), Bash(ls *), Bash(cat /tmp/*), Bash(pwd), Edit, Write, Skill(commit *)
 ---
 
 # Ralphex Finalize
 
-Clean up the revision history after `/ralphex-implement`, restructure into atomic
-reviewable commits, and prepare for PR.
+Clean up the revision history after `/ralphex-implement` and `/ralphex-review`,
+restructure into atomic reviewable commits, and prepare for PR.
 
 > **Critical rule**: Every Bash tool call must be a standalone command. NEVER combine
 > commands with `||`, `&&`, `|`, or `;`. Handle errors and fallbacks in skill logic.
@@ -24,7 +24,6 @@ reviewable commits, and prepare for PR.
 
 - Working directory: !`pwd`
 - Current jj state: !`jj log -n 20 2>/dev/null || echo "NO_JJ"`
-- Codex installed: !`which codex 2>/dev/null || echo "NOT_FOUND"`
 - Completed plans: !`ls docs/plans/completed/*.md 2>/dev/null || echo "NONE"`
 
 ## Arguments
@@ -215,7 +214,7 @@ Run `/commit` to create a rev for the documentation update.
 
 ---
 
-## Phase 5: Verify & Review
+## Phase 5: Verify
 
 ### 5.1 Run tests
 
@@ -247,30 +246,6 @@ Confirm:
 - No conflict markers
 - Each rev is atomic and reviewable
 
-### 5.3 Code review
-
-Launch reviews in parallel:
-
-**If codex is available:**
-Launch as background task:
-```bash
-codex exec review --full-auto --json > /tmp/codex-review-{TIMESTAMP}.jsonl
-```
-
-When notified of completion, extract review text:
-```bash
-jq -rs '[.[] | select(.type=="item.completed" and .item.type=="agent_message") | .item.text] | last // ""' /tmp/codex-review-{TIMESTAMP}.jsonl
-```
-
-**Claude review (always runs):**
-Launch a subagent (`subagent_type: general-purpose`) to review:
-- Read all implementation files
-- Check for bugs, security issues, code quality problems
-- Verify error handling and edge cases
-- Report findings with file:line references
-
-**If codex is not available:** Claude review only. Note this in the report.
-
 ---
 
 ## Phase 6: Final Report
@@ -292,25 +267,15 @@ Output a structured report to the user:
    └─ {files changed summary}
 ...
 N. {rev_id_short} — docs: update todo and spec
-   └─ docs/todo.md, docs/spec.md
+   └─ {docs/todo.md, docs/spec.md}
 
 ### Docs Updated
 - todo.md: {items marked complete}
 - spec.md: {changes made, or "no changes needed"}
 
-### Review Findings
-
-#### Codex Review
-{codex findings or "Codex not available"}
-
-#### Claude Review
-{claude findings}
-
-### Action Items
-{list of findings that need discussion — DO NOT auto-fix these}
+### Ready for PR
+All revs are clean, atomic, and reviewable.
 ```
-
-**Do NOT fix review findings.** They are for the user to discuss and decide on.
 
 ---
 
@@ -322,7 +287,6 @@ N. {rev_id_short} — docs: update todo and spec
 | Squash causes cascading conflicts | Undo, try split-first approach |
 | Split subagent fails safety check | Report remaining changes, stop |
 | Tests fail after restructuring | Report failures, stop |
-| Codex not installed | Claude-only review, note in report |
 
 ---
 
